@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>iSpace · 学习资料</title><link rel="stylesheet" href="/static/style.css"><script defer src="/static/app.js"></script></head>
+<body>
+<aside class="sidebar">
+  <a class="brand" href="/"><span class="brand-icon">i</span><span>iSpace<span class="brand-sub">学习资料助手</span></span></a>
+  <div class="nav-label">工作空间</div>
+  <a class="nav active" href="#overview"><span>▦</span> 资料总览</a>
+  <a class="nav" href="#courses"><span>▤</span> 我的课程</a>
+  <a class="nav" href="#history"><span>↻</span> 同步记录</a>
+  <a class="nav" href="#settings"><span>⚙</span> 账号与计划</a>
+  <div class="sidebar-bottom"><span class="local-dot"></span> 本机工作空间<p>资料留在你的电脑上<br>v0.1 · BNBU iSpace</p></div>
+</aside>
+<main id="overview">
+  <header><div class="breadcrumb">工作空间 <span>/</span> 资料总览</div><span class="chip">本地运行</span></header>
+  <section class="heading"><div><div class="eyebrow">A LITTLE LESS BUSYWORK</div><h1>把时间留给学习。</h1><p>课程资料自动归位，每一次更新都有记录。</p></div><button id="sync" class="primary">↻&nbsp; 立即检查</button></section>
+  <div id="notice" class="notice" role="status" aria-live="polite">正在读取工作空间…</div>
+  <section class="metrics" aria-label="同步概况">
+    <article><div class="metric-label">已绑定课程 <span>▤</span></div><strong id="bound-count">0</strong><small>每门课都有自己的位置</small></article>
+    <article><div class="metric-label">最近新增 <span>↓</span></div><strong id="download-count">—</strong><small id="last-check">尚未执行检查</small></article>
+    <article><div class="metric-label">需要处理 <span>◷</span></div><strong id="failed-count">—</strong><small>失败项目可重新检查</small></article>
+    <article class="schedule-metric"><div class="metric-label">下一次检查 <span>↗</span></div><strong id="next-time">未开启</strong><small id="next-date">在下方设置每日检查</small></article>
+  </section>
+  <section id="courses" class="panel">
+    <div class="section-head"><div><h2>我的课程 <span id="course-count" class="count">0</span></h2><p>为需要同步的课程选择专用文件夹，已有资料会自动参与比对。</p></div><button id="refresh-courses" class="secondary">刷新课程</button></div>
+    <div id="course-list" class="course-list"><div class="empty"><div class="empty-symbol">▤</div><h3>从第一门课开始</h3><p>先连接学校账号，再刷新课程列表。</p><a href="#settings">连接 iSpace →</a></div></div>
+  </section>
+  <section id="history" class="panel">
+    <div class="section-head"><div><h2>同步记录</h2><p>新增、已有和未完成的项目都会在这里显示。</p></div><span class="subtle">最近 200 条</span></div>
+    <div class="table-scroll"><table><thead><tr><th>文件 / 课程</th><th>状态</th><th>详情</th><th>时间</th></tr></thead><tbody id="events"><tr><td colspan="4" class="empty-row">还没有同步记录</td></tr></tbody></table></div>
+  </section>
+  <section id="settings" class="settings-grid">
+    <article class="panel settings-card"><h2>连接学校账号 <span id="auth-badge" class="badge neutral">未登录</span></h2><p>连接 ispace.bnbu.edu.cn，凭据加密保存在当前 Windows 账户下。</p>
+      <form id="login-form"><label for="username">学校账号</label><input id="username" autocomplete="username" required placeholder="输入你的 iSpace 账号"><label for="password">密码</label><input id="password" type="password" autocomplete="current-password" required placeholder="输入密码"><div class="button-row"><button type="submit" class="primary">登录并记住</button><button type="button" id="manual-login" class="secondary">手动登录窗口</button></div></form>
+      <p class="hint">有验证码时使用手动窗口。登录状态过期后会尝试重新连接。</p><button id="logout" class="text-button">清除本机凭据与登录状态</button>
+    </article>
+    <article class="panel settings-card"><h2>每日自动检查</h2><p>浏览器关闭后仍可按计划运行，电脑需开机、联网且 Windows 账户已登录。</p>
+      <form id="schedule-form"><label for="schedule-time">检查时间 · 北京时间</label><input id="schedule-time" type="time" value="20:00" required><label class="check-label"><input id="schedule-enabled" type="checkbox"> 启用每日检查</label><button type="submit" class="primary">保存检查计划</button></form>
+      <div class="note-card"><strong>只收新内容，保留旧版本。</strong><p>首次比对时可能临时下载核验。相同内容不会留下重复副本；老师更新同名文件时会保留新旧版本。</p></div>
+    </article>
+  </section>
+  <footer>为你的学习资料，留一个井井有条的位置。<span>iSpace Downloader / v0.1</span></footer>
+</main>
+</body></html>
