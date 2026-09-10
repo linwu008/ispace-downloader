@@ -11,10 +11,25 @@ def now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def data_dir() -> Path:
-    path = Path(os.environ.get("ISPACE_DATA_DIR", str(Path(os.environ.get("LOCALAPPDATA", Path.home())) / "iSpaceDownloader")))
+def data_dir(marker: Path | None = None) -> Path:
+    # Persist the resolved default: packaged-app and Explorer launches can resolve
+    # LOCALAPPDATA differently on Windows. Explicit overrides remain independent.
+    marker = marker or Path(__file__).resolve().parent.parent / ".runtime" / "data-dir.txt"
+    override = os.environ.get("ISPACE_DATA_DIR")
+    if override:
+        path = Path(override).expanduser()
+    elif marker.exists():
+        path = Path(marker.read_text(encoding="utf-8").strip())
+        if not path.is_absolute():
+            raise ValueError("Saved data directory must be an absolute path")
+    else:
+        path = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "iSpaceDownloader"
     path.mkdir(parents=True, exist_ok=True)
-    return path.resolve()
+    path = path.resolve()
+    if not override and not marker.exists():
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(str(path), encoding="utf-8")
+    return path
 
 
 class Store:

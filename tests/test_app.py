@@ -104,3 +104,17 @@ def test_invalid_login_does_not_echo_password(tmp_path):
     response = client.post("/api/login",headers={"X-iSpace-Token":token},json={"username":"","password":"do-not-echo"})
     assert response.status_code == 422
     assert "do-not-echo" not in response.text
+
+
+def test_default_data_directory_survives_launch_environment_change(tmp_path, monkeypatch):
+    from ispace.state import data_dir
+    monkeypatch.delenv("ISPACE_DATA_DIR", raising=False)
+    marker = tmp_path / "runtime" / "data-dir.txt"
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "first-launch"))
+    initial = data_dir(marker)
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "second-launch"))
+    assert data_dir(marker) == initial
+    monkeypatch.setenv("ISPACE_DATA_DIR", str(tmp_path / "explicit"))
+    assert data_dir(marker) == (tmp_path / "explicit").resolve()
+    monkeypatch.delenv("ISPACE_DATA_DIR")
+    assert data_dir(marker) == initial
