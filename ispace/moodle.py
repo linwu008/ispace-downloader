@@ -11,6 +11,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from .security import LoginRequired
+from .grouping import TeachingGroup, UNKNOWN, group_for
 
 BASE = "https://ispace.bnbu.edu.cn"
 
@@ -47,6 +48,8 @@ class Resource:
     url: str
     name: str
     source: str = ""
+    group: TeachingGroup = UNKNOWN
+    source_page: str = ""
 
     @property
     def key(self):
@@ -113,7 +116,7 @@ class Moodle:
         cookies = httpx.Cookies()
         for cookie in (state or {}).get("cookies", []):
             cookies.set(cookie["name"], cookie["value"], domain=cookie.get("domain", ""), path=cookie.get("path", "/"))
-        self.client = httpx.Client(cookies=cookies, transport=transport, timeout=httpx.Timeout(60, connect=20), headers={"User-Agent": "iSpaceDownloader/0.1 (personal course backup)", "Accept-Encoding": "identity"})
+        self.client = httpx.Client(cookies=cookies, transport=transport, trust_env=False, timeout=httpx.Timeout(60, connect=20), headers={"User-Agent": "iSpaceDownloader/0.2 (personal course backup)", "Accept-Encoding": "identity"})
 
     def close(self):
         self.client.close()
@@ -217,13 +220,13 @@ class Moodle:
             raise
         except (ResourceError, httpx.HTTPError):
             pass
-        queue = deque([self.base + f"/course/view.php?id={course_id}"])
+        queue = deque([(self.base + f"/course/view.php?id={course_id}", UNKNOWN)])
         while queue:
             if len(seen_pages) >= 5000:
                 result.errors.append("达到页面读取上限，部分资源尚未检查")
                 break
-            url = queue.popleft()
-            page_key = canonical(url)
+            url, inherited = queue.popleft()
+            page_key = (canonical(url), inherited.key)
             if page_key in seen_pages:
                 continue
             seen_pages.add(page_key)
@@ -231,19 +234,23 @@ class Moodle:
                 actual_url, html = self.page(url)
                 if file_url(actual_url):
                     key = canonical(actual_url)
-                    if key not in seen_files:
-                        seen_files.add(key)
-                        result.resources.append(Resource(actual_url, unquote(urlsplit(actual_url).path.rsplit("/", 1)[-1]), key))
+                    association = (key, inherited.key)
+                    if association not in seen_files:
+                        seen_files.add(association)
+                        result.resources.append(Resource(actual_url, unquote(urlsplit(actual_url).path.rsplit("/", 1)[-1]), key, inherited, url))
                     continue
                 content = soup_of(html).select_one('[role="main"], #region-main')
                 if content is None:
                     raise ResourceError("未识别课程内容区域，需适配页面")
+                for navigation in content.select(".activity-navigation, .activity-navigation-container, .nextprev, nav, [data-region=activity-navigation]"):
+                    navigation.decompose()
                 path = urlsplit(actual_url).path
                 is_forum = "/mod/forum/" in path
                 discovered_here = 0
                 for node in content.select('a[href], object[data], embed[src], iframe[src]'):
                     target = urljoin(actual_url, node.get("href") or node.get("data") or node.get("src"))
                     parts = urlsplit(target)
+                    group = group_for(node, inherited, actual_url)
                     if file_url(target):
                         if not self.allowed(target):
                             result.errors.append("发现外部附件，本版无法自动读取")
@@ -258,21 +265,22 @@ class Moodle:
                                 continue
                         key = canonical(target)
                         discovered_here += 1
-                        if key not in seen_files:
-                            seen_files.add(key)
-                            result.resources.append(Resource(target, unquote(parts.path.rsplit("/", 1)[-1]) or node.get_text(strip=True), key))
+                        association = (key, group.key)
+                        if association not in seen_files:
+                            seen_files.add(association)
+                            result.resources.append(Resource(target, unquote(parts.path.rsplit("/", 1)[-1]) or node.get_text(strip=True), key, group, actual_url))
                         continue
                     if not self.allowed(target):
                         continue
                     query = parse_qs(parts.query)
                     supported = parts.path in {"/mod/resource/view.php", "/mod/folder/view.php", "/mod/forum/view.php", "/mod/forum/discuss.php", "/mod/assign/view.php", "/mod/page/view.php"}
                     if supported and not any(k in query for k in ("action", "sesskey", "edit", "delete", "submit")):
-                        if canonical(target) not in seen_pages:
-                            queue.append(target)
+                        if (canonical(target), group.key) not in seen_pages:
+                            queue.append((target, group))
                     elif parts.path == "/course/view.php" and query.get("id") == [str(course_id)] and "section" in query:
-                        queue.append(target)
+                        queue.append((target, group))
                     elif parts.path == "/course/section.php" and query.get("id"):
-                        queue.append(target)
+                        queue.append((target, group))
                 if path == "/mod/resource/view.php" and discovered_here == 0:
                     raise ResourceError("文件资源页未发现可下载附件，可能需要适配嵌入方式")
                 time.sleep(0.15)

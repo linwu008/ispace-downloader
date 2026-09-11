@@ -49,54 +49,12 @@ def strong_etag(headers):
 class SyncEngine:
     def __init__(self, store, platform, sleep=time.sleep):
         self.store, self.platform, self.sleep = store, platform, sleep
+        self.resource_cache = {}
+        self.pending_organization = 0
 
     def one(self, course, resource, index):
-        folder = Path(course["folder"]).resolve()
-        previous = self.store.resource(course["id"], resource.key)
-        headers = self.platform.metadata(resource)
-        etag = strong_etag(headers)
-        if previous and etag and etag == previous["etag"] and previous["digest"] in index:
-            local = index[previous["digest"]]
-            self.store.remember(course["id"], resource.key, local, previous["digest"], etag, headers.get("last-modified"), local.stat().st_size)
-            return "skipped", "远端版本未变，本地内容已核对"
-        temporary_dir = folder / ".ispace-temp"
-        temporary_dir.mkdir(exist_ok=True)
-        if temporary_dir.is_symlink() or not temporary_dir.resolve().is_relative_to(folder):
-            raise ResourceError("临时目录不能指向课程目录之外")
-        handle, filename = tempfile.mkstemp(suffix=".part", dir=temporary_dir)
-        os.close(handle)
-        temporary = Path(filename)
-        try:
-            download_headers = self.platform.download(resource, temporary)
-            content_hash = digest(temporary)
-            local = index.get(content_hash)
-            if local and local.exists() and digest(local) == content_hash:
-                status, message = "skipped", "内容已存在，未保存重复副本"
-            else:
-                name = safe_name(resource.name)
-                stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-                name = f"{Path(name).stem}_{stamp}_{content_hash[:8]}{Path(name).suffix}"
-                local = folder / name
-                for attempt in range(1000):
-                    target = local if attempt == 0 else local.with_name(f"{local.stem}_{attempt}{local.suffix}")
-                    try:
-                        if os.name == "nt":
-                            os.rename(temporary, target)  # Windows rename fails instead of replacing an existing file.
-                        else:
-                            os.link(temporary, target)
-                            temporary.unlink()
-                        local = target
-                        break
-                    except FileExistsError:
-                        continue
-                else:
-                    raise ResourceError("同名文件过多，未覆盖已有文件")
-                index[content_hash] = local
-                status, message = "downloaded", local.name
-            self.store.remember(course["id"], resource.key, local, content_hash, strong_etag(download_headers), download_headers.get("last-modified"), local.stat().st_size)
-            return status, message
-        finally:
-            temporary.unlink(missing_ok=True)
+        from .grouped_sync import sync_one
+        return sync_one(self, course, resource, index)
 
     def run(self, run_id):
         counts = {"downloaded": 0, "skipped": 0, "failed": 0}
@@ -133,5 +91,6 @@ class SyncEngine:
                 counts["failed"] += 1
                 self.store.event(run_id, course["id"], course["name"], "failed", safe_error(exc))
         status = "partial" if counts["failed"] else "success"
-        self.store.finish(run_id, status, **counts, message="部分检查或下载失败，请查看详情并重试" if counts["failed"] else "已完成全部已绑定课程的检查")
-        return {"status": status, **counts}
+        pending_message = f"；{self.pending_organization} 项已有资料待确认整理" if self.pending_organization else ""
+        self.store.finish(run_id, status, **counts, message="部分检查或下载失败，请查看详情并重试" if counts["failed"] else "已完成全部已绑定课程的检查" + pending_message)
+        return {"status": status, "pending_organization": self.pending_organization, "message": ("部分检查失败" if counts["failed"] else "课程检查完成") + pending_message, **counts}

@@ -55,6 +55,9 @@ class Store:
                     name TEXT NOT NULL, status TEXT NOT NULL, message TEXT NOT NULL, created TEXT NOT NULL);
             """)
 
+        from .catalog import migrate
+        migrate(self)
+
     def connect(self):
         db = sqlite3.connect(self.path, timeout=30)
         db.row_factory = sqlite3.Row

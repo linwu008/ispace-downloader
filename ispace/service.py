@@ -87,7 +87,10 @@ class Service:
         run_id, platform = None, None
         self.store.set("operation", {"name": operation, "status": "running", "started": now()})
         try:
-            if operation in {"login", "manual_login"}:
+            if operation == "organize":
+                from .organize import execute
+                result = execute(self.store, kwargs["preview_id"], kwargs["selected"])
+            elif operation in {"login", "manual_login"}:
                 if operation == "login":
                     # A new explicit login must validate the submitted account, not reuse another session.
                     self.vault.path.unlink(missing_ok=True)
