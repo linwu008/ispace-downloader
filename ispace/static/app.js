@@ -21,12 +21,12 @@ async function action(path, method='POST', body) {
     await refresh();
   } catch(error) { transientUntil = Date.now() + 6000; notice(error.message,true); }
 }
-function renderCourses(courses) {
-  const signature=JSON.stringify(courses);
+function renderCourses(courses, groups=[]) {
+  const signature=JSON.stringify([courses,groups]);
   if(signature===courseSignature)return;
   courseSignature=signature;
   if(!courses.length)return;
-  const container=$('course-list');container.replaceChildren();
+  const container=$('course-list');const openGroups=new Set([...container.querySelectorAll('details[open]')].map(d=>d.dataset.courseId));container.replaceChildren();
   for(const course of courses) {
     const row=el('article',undefined,'course'), info=el('div');
     info.append(el('div',course.name,'course-title'),el('div',`课程 ${course.id} · ${course.folder?'已绑定专用文件夹':'等待绑定文件夹'}`,'course-meta'));
@@ -36,7 +36,7 @@ function renderCourses(courses) {
     field.append(input,choose);
     const options=el('div',undefined,'course-options'),label=el('label'),enabled=el('input');enabled.type='checkbox';enabled.checked=course.folder?Boolean(course.enabled):true;label.append(enabled,document.createTextNode(' 启用这门课的同步'));
     const save=el('button','保存绑定','text-button');save.type='button';save.onclick=()=>action(`/courses/${course.id}`,'PUT',{folder:input.value.trim(),enabled:enabled.checked});
-    options.append(label,save);controls.append(field,options);row.append(info,controls);container.append(row);
+    options.append(label,save);controls.append(field,options);row.append(info,controls);if(course.folder){const details=renderTeachingGroups(course,groups.filter(g=>g.course_id===course.id));details.open=openGroups.has(String(course.id));row.append(details);}container.append(row);
   }
 }
 function renderEvents(events) {
@@ -61,7 +61,8 @@ async function refresh() {
     $('next-date').textContent=state.schedule.enabled?formatTime(state.schedule.next):'在下方设置每日检查';
     const logged=state.auth==='logged_in';$('auth-badge').textContent=logged?'已连接（最近验证）':state.auth==='auth_required'?'需要重新登录':'未登录';$('auth-badge').className='badge '+(logged?'success':'neutral');
     if(!scheduleReady){$('schedule-time').value=state.schedule.time;$('schedule-enabled').checked=state.schedule.enabled;scheduleReady=true;}
-    renderCourses(state.courses);renderEvents(state.events);
+    renderCourses(state.courses,state.groups||[]);renderEvents(state.events);
+    window.dispatchEvent(new CustomEvent('ispace-state',{detail:state}));
     const op=state.operation;
     if(busy)notice(op.name==='manual_login'?'请在弹出的浏览器中完成登录，窗口最多等待 3 分钟。':'正在处理，请保持电脑联网。文件多时首次核对会需要一些时间。');
     else if(Date.now()<transientUntil){}
@@ -75,4 +76,4 @@ $('logout').onclick=()=>action('/logout');
 $('sync').onclick=()=>action('/sync');
 $('refresh-courses').onclick=()=>action('/courses/refresh');
 $('schedule-form').addEventListener('submit',event=>{event.preventDefault();action('/schedule','PUT',{time:$('schedule-time').value,enabled:$('schedule-enabled').checked});});
-refresh();setInterval(()=>{if(!document.hidden)refresh();},4000);
+window.addEventListener('DOMContentLoaded',()=>{refresh();setInterval(()=>{if(!document.hidden)refresh();},4000);});

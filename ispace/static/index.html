@@ -1,15 +1,16 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>iSpace · 学习资料</title><link rel="stylesheet" href="/static/style.css"><script defer src="/static/app.js"></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>iSpace · 学习资料</title><link rel="stylesheet" href="/static/style.css"><script defer src="/static/app.js"></script><script defer src="/static/library.js"></script></head>
 <body>
 <aside class="sidebar">
   <a class="brand" href="/"><span class="brand-icon">i</span><span>iSpace<span class="brand-sub">学习资料助手</span></span></a>
   <div class="nav-label">工作空间</div>
   <a class="nav active" href="#overview"><span>▦</span> 资料总览</a>
   <a class="nav" href="#courses"><span>▤</span> 我的课程</a>
+  <a class="nav" href="#library"><span>⌕</span> 分组资料库</a>
   <a class="nav" href="#history"><span>↻</span> 同步记录</a>
   <a class="nav" href="#settings"><span>⚙</span> 账号与计划</a>
-  <div class="sidebar-bottom"><span class="local-dot"></span> 本机工作空间<p>资料留在你的电脑上<br>v0.1 · BNBU iSpace</p></div>
+  <div class="sidebar-bottom"><span class="local-dot"></span> 本机工作空间<p>资料留在你的电脑上<br>v0.2 · BNBU iSpace</p></div>
 </aside>
 <main id="overview">
   <header><div class="breadcrumb">工作空间 <span>/</span> 资料总览</div><span class="chip">本地运行</span></header>
@@ -25,6 +26,13 @@
     <div class="section-head"><div><h2>我的课程 <span id="course-count" class="count">0</span></h2><p>为需要同步的课程选择专用文件夹，已有资料会自动参与比对。</p></div><button id="refresh-courses" class="secondary">刷新课程</button></div>
     <div id="course-list" class="course-list"><div class="empty"><div class="empty-symbol">▤</div><h3>从第一门课开始</h3><p>先连接学校账号，再刷新课程列表。</p><a href="#settings">连接 iSpace →</a></div></div>
   </section>
+  <section id="library" class="panel">
+    <div class="section-head"><div><h2>分组资料库 <span id="material-total" class="count">0</span></h2><p>按教学进度找资料，已有文件先预览再整理。</p></div><button id="preview-organization" class="secondary">预览整理已有资料</button></div>
+    <div class="library-filters"><input id="file-search" type="search" placeholder="搜索文件名、课程或 Week／课次" aria-label="搜索资料"><select id="filter-course" aria-label="筛选课程"><option value="">所有课程</option></select><select id="filter-group" aria-label="筛选分组"><option value="">所有分组</option></select><select id="filter-status" aria-label="筛选状态"><option value="">所有状态</option><option value="pending_organize">待整理</option><option value="downloaded">已下载</option><option value="existing">已存在</option><option value="missing">本地缺失</option><option value="failed">检查失败</option></select></div>
+    <div class="table-scroll"><table><thead><tr><th>资料与本地位置</th><th>分组 / 课程</th><th>状态</th><th>操作</th></tr></thead><tbody id="material-list"></tbody></table></div>
+    <div class="library-pagination"><span id="page-number">第 1 页</span><div><button id="previous-page" class="secondary">上一页</button> <button id="next-page" class="secondary">下一页</button></div></div>
+    <p id="organization-result" class="organization-result">尚未执行整理。</p>
+  </section>
   <section id="history" class="panel">
     <div class="section-head"><div><h2>同步记录</h2><p>新增、已有和未完成的项目都会在这里显示。</p></div><span class="subtle">最近 200 条</span></div>
     <div class="table-scroll"><table><thead><tr><th>文件 / 课程</th><th>状态</th><th>详情</th><th>时间</th></tr></thead><tbody id="events"><tr><td colspan="4" class="empty-row">还没有同步记录</td></tr></tbody></table></div>
@@ -39,6 +47,7 @@
       <div class="note-card"><strong>只收新内容，保留旧版本。</strong><p>首次比对时可能临时下载核验。相同内容不会留下重复副本；老师更新同名文件时会保留新旧版本。</p></div>
     </article>
   </section>
-  <footer>为你的学习资料，留一个井井有条的位置。<span>iSpace Downloader / v0.1</span></footer>
+  <footer>为你的学习资料，留一个井井有条的位置。<span>iSpace Downloader / v0.2</span></footer>
 </main>
+<dialog id="organization-dialog" aria-labelledby="preview-title"><div class="section-head"><h2 id="preview-title">确认资料整理方案</h2><button id="close-preview" class="secondary">关闭</button></div><p id="preview-description" class="dialog-note"></p><div class="preview-tools"><button id="select-preview" class="text-button">全选可执行项</button><button id="clear-preview" class="text-button">取消选择</button></div><div class="table-scroll preview-table"><table><thead><tr><th>选择</th><th>资料 / 操作</th><th>原位置</th><th>目标位置</th><th>说明</th></tr></thead><tbody id="preview-rows"></tbody></table></div><p id="preview-empty" class="empty-row" hidden>当前没有需要整理的已关联资料。</p><div class="dialog-footer"><span>执行前会再次核对文件和设置，已有文件不会被覆盖。</span><button id="execute-organization" class="primary">确认并执行所选项目</button></div></dialog>
 </body></html>

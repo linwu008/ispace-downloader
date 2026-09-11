@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from filelock import Timeout
 from pydantic import BaseModel, Field
 
-from . import __version__
+from . import __version__, catalog, organize
 from .scheduler import configure, next_run
 from .service import Service, BusyError
 from .state import Store, data_dir
@@ -32,6 +32,26 @@ class BindingBody(BaseModel):
 class ScheduleBody(BaseModel):
     enabled: bool
     time: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+
+
+
+class GroupBody(BaseModel):
+    mode: str = Field(pattern="^(auto|manual)$")
+    folder: str | None = Field(default=None, max_length=1000)
+
+
+class PlacementBody(BaseModel):
+    group_id: str
+
+
+class PreviewBody(BaseModel):
+    course_id: int | None = None
+    group_id: str | None = None
+
+
+class ExecuteBody(BaseModel):
+    preview_id: str
+    selected: list[str] = Field(min_length=1, max_length=1000)
 
 
 def create_app(store=None, service=None):
@@ -97,6 +117,8 @@ def create_app(store=None, service=None):
             "auth_checked_at": store.setting("auth_checked_at"),
             "courses": store.courses(), "operation": operation,
             "schedule": {"enabled": enabled, "time": schedule_time, "next": next_run(schedule_time) if enabled else None},
+            "groups": catalog.groups(store),
+            "organization_history": organize.history(store),
             **store.history(),
         }
 
@@ -152,6 +174,50 @@ def create_app(store=None, service=None):
         if result.returncode:
             raise ValueError("无法打开目录选择器，请直接粘贴文件夹路径")
         return {"folder": result.stdout.decode("utf-8-sig").strip()}
+
+    @app.get("/api/groups")
+    def group_list(course_id: int | None = None):
+        return {"groups": catalog.groups(store, course_id)}
+
+    @app.put("/api/groups/{group_id}")
+    def group_binding(group_id: str, body: GroupBody):
+        with service.lock():
+            return organize.preview(store, group_id=group_id, folder=body.folder, mode=body.mode)
+
+    @app.get("/api/materials")
+    def materials(q: str = "", course_id: int | None = None, group_id: str | None = None, status: str | None = None, page: int = 1, page_size: int = 30):
+        return catalog.material_page(store, q, course_id, group_id, status, page, page_size)
+
+    @app.put("/api/materials/{item_id}/group")
+    def placement(item_id: int, body: PlacementBody):
+        with service.lock():
+            return organize.preview(store, item_id=item_id, target_group_id=body.group_id)
+
+    @app.post("/api/materials/{item_id}/locate")
+    def locate(item_id: int):
+        item = catalog.material(store, item_id)
+        root = Path(catalog.course_for(store, item["course_id"])["folder"]).resolve()
+        path = Path(item["path"] or "")
+        if not item["path"] or not path.is_file() or path.is_symlink() or not path.resolve().is_relative_to(root):
+            raise ValueError("本地文件不存在或不在课程目录内，请重新检查")
+        if os.name != "nt":
+            raise ValueError("定位文件仅支持 Windows")
+        subprocess.Popen(["explorer.exe", "/select,", str(path.resolve())])
+        return {"ok": True}
+
+    @app.post("/api/organization/preview")
+    def preview(body: PreviewBody):
+        with service.lock():
+            return organize.preview(store, course_id=body.course_id, group_id=body.group_id)
+
+    @app.get("/api/organization/{preview_id}")
+    def organization_plan(preview_id: str):
+        return organize.load(store, preview_id)
+
+    @app.post("/api/organization/execute", status_code=202)
+    def execute_plan(body: ExecuteBody):
+        service.start("organize", preview_id=body.preview_id, selected=body.selected)
+        return {"accepted": True}
 
     app.mount("/static", StaticFiles(directory=static), name="static")
     return app
