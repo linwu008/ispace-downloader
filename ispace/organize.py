@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import stat
 import uuid
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -205,7 +207,19 @@ def execute(store, identifier, selected):
                 related = [r for r in plan["rows"] if r.get("source") == str(source) and r.get("status") == "done"]
                 if not all(verified(Path(r["target"]), r["digest"], root) for r in related):
                     raise ValueError("目标副本发生变化，保留原件以便重新检查")
-                source.unlink()
+                original_mode = source.stat().st_mode
+                read_only = os.name == "nt" and not (original_mode & stat.S_IWRITE)
+                if read_only:
+                    for copy in related:
+                        destination_copy = Path(copy["target"])
+                        destination_copy.chmod(destination_copy.stat().st_mode & ~stat.S_IWRITE)
+                    source.chmod(original_mode | stat.S_IWRITE)
+                try:
+                    source.unlink()
+                except OSError:
+                    if read_only and source.exists():
+                        source.chmod(original_mode)
+                    raise
                 with store.connect() as db:
                     db.execute("UPDATE resources SET path=? WHERE course_id=? AND path=? AND digest=?", (row["target"], row["course_id"], str(source), row["digest"]))
             except Exception as exc:

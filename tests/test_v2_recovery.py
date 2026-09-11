@@ -105,3 +105,20 @@ def test_same_titles_with_different_ids_get_disjoint_folders(setup):
     assert first['folder'] != second['folder']
     catalog.target_dir(store, first)
     catalog.target_dir(store, second)
+
+
+def test_windows_read_only_original_can_be_organized(setup):
+    import os, stat
+    if os.name != 'nt':
+        pytest.skip('Windows read-only attribute')
+    store, root = setup
+    platform = Platform((W1,))
+    old = seed_legacy(store, root, platform)
+    old.chmod(stat.S_IREAD)
+    run(store, platform)
+    plan = organize.preview(store, course_id=1)
+    result = organize.execute(store, plan['id'], [r['id'] for r in plan['rows'] if r['selectable']])
+    assert result['failed'] == 0 and not old.exists()
+    target = Path(plan['rows'][0]['target'])
+    assert target.is_file() and not (target.stat().st_mode & stat.S_IWRITE)
+    target.chmod(stat.S_IWRITE | stat.S_IREAD)
