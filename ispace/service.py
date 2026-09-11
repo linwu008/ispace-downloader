@@ -20,6 +20,12 @@ class Service:
         self.vault = vault or Vault(store.directory)
         self.platform_factory = platform_factory
         self.login = login
+        try:
+            with self.lock():
+                from .previews import cleanup
+                cleanup(store)
+        except Timeout:
+            pass
         self.pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="ispace")
 
     def lock(self):
@@ -87,7 +93,17 @@ class Service:
         run_id, platform = None, None
         self.store.set("operation", {"name": operation, "status": "running", "started": now()})
         try:
-            if operation == "organize":
+            if operation == "preview":
+                from .previews import prepare
+                result = prepare(self.store, kwargs["item_id"])
+                if result is None:
+                    platform = self.authenticated()
+                    result = prepare(self.store, kwargs["item_id"], platform)
+            elif operation == "catalog":
+                from .courses import discover
+                platform = self.authenticated()
+                result = discover(self.store, platform, kwargs["course_id"])
+            elif operation == "organize":
                 from .organize import execute
                 result = execute(self.store, kwargs["preview_id"], kwargs["selected"])
             elif operation in {"login", "manual_login"}:
@@ -102,7 +118,7 @@ class Service:
                 self.store.set("auth_checked_at", now())
                 result = {"status": "success", "message": "登录成功，请刷新课程并绑定目录"}
             else:
-                if operation == "sync":
+                if operation in {"sync", "download"}:
                     run_id = self.store.start_run()
                 platform = self.authenticated()
                 self.store.set("auth_checked_at", now())
@@ -111,10 +127,10 @@ class Service:
                     self.store.refresh_courses(courses)
                     self.store.set("courses_checked_at", now())
                     result = {"status": "success", "message": f"已读取 {len(courses)} 门课程，请为需要同步的课程绑定目录"}
-                elif operation == "sync":
+                elif operation in {"sync", "download"}:
                     self.store.refresh_courses(platform.courses())
                     self.store.set("courses_checked_at", now())
-                    result = SyncEngine(self.store, platform).run(run_id)
+                    result = SyncEngine(self.store, platform).run(run_id, course_ids=kwargs.get("course_ids"), material_ids=kwargs.get("material_ids"))
                 else:
                     raise ValueError("未知操作")
             self.store.set("operation", {"name": operation, "finished": now(), **result})

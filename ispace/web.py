@@ -7,13 +7,13 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 from filelock import Timeout
 from pydantic import BaseModel, Field
 
-from . import __version__, catalog, organize
+from . import __version__, catalog, organize, courses, previews
 from .scheduler import configure, next_run
 from .service import Service, BusyError
 from .state import Store, data_dir
@@ -54,6 +54,21 @@ class ExecuteBody(BaseModel):
     selected: list[str] = Field(min_length=1, max_length=1000)
 
 
+class MembershipBody(BaseModel):
+    course_ids: list[int] = Field(min_length=1, max_length=1000)
+    added: bool = True
+
+
+class SelectionBody(BaseModel):
+    selected_ids: list[int] = Field(max_length=1000)
+    mode: str = Field(default='selected', pattern='^(all|selected)$')
+
+
+class DownloadBody(BaseModel):
+    course_id: int
+    material_ids: list[int] = Field(min_length=1, max_length=1000)
+
+
 def create_app(store=None, service=None):
     store = store or Store(data_dir())
     service = service or Service(store)
@@ -81,6 +96,8 @@ def create_app(store=None, service=None):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "no-referrer"
         response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+        if request.url.path.endswith('/preview/content'):
+            response.headers['Content-Security-Policy'] = "default-src 'none'; frame-ancestors 'self'"
         return response
 
     @app.exception_handler(RequestValidationError)
@@ -115,7 +132,8 @@ def create_app(store=None, service=None):
             "version": __version__, "csrf": csrf, "busy": busy,
             "auth": store.setting("auth_state", "not_logged_in"),
             "auth_checked_at": store.setting("auth_checked_at"),
-            "courses": store.courses(), "operation": operation,
+            "courses": courses.summaries(store), "operation": operation,
+            "active_material": store.setting("active_material") if busy else None,
             "schedule": {"enabled": enabled, "time": schedule_time, "next": next_run(schedule_time) if enabled else None},
             "groups": catalog.groups(store),
             "organization_history": organize.history(store),
@@ -141,9 +159,15 @@ def create_app(store=None, service=None):
         return {"ok": True}
 
     @app.post("/api/courses/refresh", status_code=202)
-    def courses():
+    def refresh_courses():
         service.start("courses")
         return {"accepted": True}
+
+    @app.put('/api/courses/membership')
+    def course_membership(body: MembershipBody):
+        with service.lock():
+            courses.membership(store, body.course_ids, body.added)
+        return {'ok': True}
 
     @app.put("/api/courses/{course_id}")
     def bind(course_id: int, body: BindingBody):
@@ -185,8 +209,8 @@ def create_app(store=None, service=None):
             return organize.preview(store, group_id=group_id, folder=body.folder, mode=body.mode)
 
     @app.get("/api/materials")
-    def materials(q: str = "", course_id: int | None = None, group_id: str | None = None, status: str | None = None, page: int = 1, page_size: int = 30):
-        return catalog.material_page(store, q, course_id, group_id, status, page, page_size)
+    def materials(q: str = "", course_id: int | None = None, group_id: str | None = None, status: str | None = None, page: int = 1, page_size: int = 30, include_removed: bool = False):
+        return catalog.material_page(store, q, course_id, group_id, status, page, page_size, include_removed)
 
     @app.put("/api/materials/{item_id}/group")
     def placement(item_id: int, body: PlacementBody):
@@ -218,6 +242,55 @@ def create_app(store=None, service=None):
     def execute_plan(body: ExecuteBody):
         service.start("organize", preview_id=body.preview_id, selected=body.selected)
         return {"accepted": True}
+
+
+    @app.post('/api/courses/{course_id}/catalog', status_code=202)
+    def refresh_catalog(course_id: int):
+        if courses.get(store, course_id)['membership'] != 'added':
+            raise ValueError('请先添加课程')
+        service.start('catalog', course_id=course_id)
+        return {'accepted': True}
+
+    @app.put('/api/courses/{course_id}/selection')
+    def save_selection(course_id: int, body: SelectionBody):
+        with service.lock():
+            courses.selection(store, course_id, body.selected_ids, body.mode)
+        return {'ok': True}
+
+    @app.post('/api/downloads', status_code=202)
+    def download_selected(body: DownloadBody):
+        course = catalog.course_for(store, body.course_id)
+        if course['membership'] != 'added':
+            raise ValueError('课程已移出我的课程')
+        for item_id in body.material_ids:
+            if catalog.material(store, item_id)['course_id'] != body.course_id:
+                raise ValueError('所选文件不属于此课程')
+        service.start('download', course_ids=[body.course_id], material_ids=body.material_ids)
+        return {'accepted': True}
+
+    @app.post('/api/materials/{item_id}/preview', status_code=202)
+    def prepare_preview(item_id: int):
+        item = catalog.material(store, item_id)
+        if not previews.kind(item['name']):
+            raise ValueError('此格式暂不支持预览，请下载后在本机打开')
+        service.start('preview', item_id=item_id)
+        return {'accepted': True}
+
+    @app.get('/api/materials/{item_id}/preview')
+    def preview_status(item_id: int):
+        return previews.prepare(store, item_id) or {'status': 'not_ready'}
+
+    @app.get('/api/materials/{item_id}/preview/content')
+    def preview_content(item_id: int):
+        item = catalog.material(store, item_id)
+        ready = previews.available(store, item)
+        if not ready:
+            raise ValueError('预览已过期，请重新点击预览')
+        if ready['mime'] == 'text/plain':
+            with ready['path'].open('rb') as stream:
+                content = stream.read(previews.TEXT_BYTES).decode('utf-8-sig', errors='replace')
+            return PlainTextResponse(content)
+        return FileResponse(ready['path'], media_type=ready['mime'], filename=item['name'], content_disposition_type='inline')
 
     app.mount("/static", StaticFiles(directory=static), name="static")
     return app

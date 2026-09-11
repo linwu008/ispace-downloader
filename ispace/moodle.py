@@ -63,12 +63,17 @@ class Discovery:
 
 
 def browser_login(vault, username=None, password=None, manual=False):
-    from playwright.sync_api import sync_playwright, TimeoutError as BrowserTimeout
+    from playwright.sync_api import sync_playwright, TimeoutError as BrowserTimeout, Error as BrowserError
     with sync_playwright() as engine:
         launch_options = {"headless": not manual}
         if not Path(engine.chromium.executable_path).exists():
             launch_options["channel"] = "msedge"
-        browser = engine.chromium.launch(**launch_options)
+        try:
+            browser = engine.chromium.launch(**launch_options)
+        except BrowserError:
+            if launch_options.get("channel") == "msedge":
+                raise
+            browser = engine.chromium.launch(**{**launch_options, "channel": "msedge"})
         try:
             context = browser.new_context(storage_state=vault.load_session() or None)
             page = context.new_page()
@@ -301,14 +306,18 @@ class Moodle:
         finally:
             response.close()
 
-    def download(self, resource, target: Path):
+    def download(self, resource, target: Path, max_bytes=None):
         response = self.request("GET", resource.url)
         try:
             response.raise_for_status()
+            if max_bytes is not None and int(response.headers.get("content-length", "0")) > max_bytes:
+                raise ResourceError("文件超过 50 MB，请下载后在本机打开")
             total, prefix = 0, b""
             with target.open("wb") as output:
                 for chunk in response.iter_bytes(128 * 1024):
                     prefix = (prefix + chunk)[:16384]
+                    if max_bytes is not None and total + len(chunk) > max_bytes:
+                        raise ResourceError("文件超过 50 MB，请下载后在本机打开")
                     output.write(chunk)
                     total += len(chunk)
             if login_page(prefix.decode("utf-8", errors="ignore")):

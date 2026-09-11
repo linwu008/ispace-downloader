@@ -57,6 +57,8 @@ class Store:
 
         from .catalog import migrate
         migrate(self)
+        from .courses import migrate as migrate_courses
+        migrate_courses(self)
 
     def connect(self):
         db = sqlite3.connect(self.path, timeout=30)
@@ -101,7 +103,7 @@ class Store:
         if not path.is_dir():
             raise ValueError("目录不存在，请先在资源管理器中创建")
         with self.connect() as db:
-            result = db.execute("UPDATE courses SET folder=?,enabled=? WHERE id=?", (str(path), int(enabled), course_id))
+            result = db.execute("UPDATE courses SET folder=?,enabled=?,membership='added' WHERE id=?", (str(path), int(enabled), course_id))
             if not result.rowcount:
                 raise ValueError("请先刷新课程列表")
 

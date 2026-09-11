@@ -186,7 +186,7 @@ def test_database_migration_is_repeatable_and_keeps_backup(setup):
     backup=store.directory/'index-pre-v0.2.sqlite3'
     before=backup.read_bytes()
     again=Store(store.directory)
-    with again.connect() as db: assert db.execute('PRAGMA user_version').fetchone()[0]==2
+    with again.connect() as db: assert db.execute('PRAGMA user_version').fetchone()[0]==3
     assert backup.read_bytes()==before and again.courses()[0]['folder']==str(root)
 
 

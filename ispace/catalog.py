@@ -123,7 +123,11 @@ def ensure_group(store, course_id, descriptor=UNKNOWN):
             group = {"id": identifier, "course_id": course_id, "source_key": descriptor.key, "title": descriptor.title, "position": descriptor.position}
             relative = auto_folder(group)
             try:
-                target_dir(store, {**group, "folder": relative})
+                course = next(c for c in store.courses() if c["id"] == course_id)
+                if course["folder"]:
+                    target_dir(store, {**group, "folder": relative})
+                elif any(g["folder"].casefold() == relative.casefold() for g in groups(store, course_id)):
+                    raise ValueError("同名目录")
             except ValueError:
                 relative += " — " + identifier[:6]
             db.execute("INSERT INTO teaching_groups(id,course_id,source_key,title,position,folder) VALUES (?,?,?,?,?,?)", (identifier, course_id, descriptor.key, descriptor.title, descriptor.position, relative))
@@ -144,7 +148,7 @@ def register(store, course_id, resource):
         row = db.execute("SELECT * FROM materials WHERE course_id=? AND source=? AND source_group=?", (course_id, resource.key, group["id"])).fetchone()
         if row:
             db.execute("UPDATE materials SET name=?,url=?,source_page=? WHERE id=?", (resource.name, resource.url, resource.source_page, row["id"]))
-            return material(store, row["id"])
+            return {**dict(row), "name": resource.name, "url": resource.url, "source_page": resource.source_page}
         legacy = db.execute("SELECT * FROM legacy_resources WHERE course_id=? AND source=?", (course_id, resource.key)).fetchone()
         path, digest = (legacy["path"], legacy["digest"]) if legacy else (None, None)
         status = "pending_organize" if legacy else "pending"
@@ -161,16 +165,18 @@ def record(store, item_id, path, digest, status, error=""):
             db.execute("INSERT OR IGNORE INTO material_versions(material_id,path,digest) VALUES (?,?,?)", (item_id, str(path), digest))
 
 
-def material_page(store, q="", course_id=None, group_id=None, status=None, page=1, page_size=30):
+def material_page(store, q="", course_id=None, group_id=None, status=None, page=1, page_size=30, include_removed=False):
     page_size, page = min(max(page_size, 1), 100), max(page, 1)
     # LIKE wildcard characters in user searches are literal.
     pattern = "%" + q.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
     condition = r"""WHERE (? IS NULL OR m.course_id=?) AND (? IS NULL OR m.group_id=?)
         AND (m.name LIKE ? ESCAPE '\' OR g.title LIKE ? ESCAPE '\' OR c.name LIKE ? ESCAPE '\')"""
     params = (course_id, course_id, group_id, group_id, pattern, pattern, pattern)
+    if not include_removed:
+        condition += " AND c.membership='added'"
     joined = " FROM materials m JOIN teaching_groups g ON g.id=m.group_id JOIN courses c ON c.id=m.course_id "
     with store.connect() as db:
-        rows = [dict(r) for r in db.execute("SELECT m.*,g.title AS group_title,g.folder AS group_folder,c.name AS course_name" + joined + condition + " ORDER BY c.name,g.position,m.name,m.id", params)]
+        rows = [dict(r) for r in db.execute("SELECT m.*,g.title AS group_title,g.folder AS group_folder,c.name AS course_name,c.sync_mode,c.membership" + joined + condition + " ORDER BY c.name,g.position,m.name,m.id", params)]
     for row in rows:
         row["exists"] = bool(row["path"] and Path(row["path"]).is_file())
         if row["path"] and not row["exists"] and row["status"] != "failed":

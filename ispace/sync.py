@@ -56,20 +56,31 @@ class SyncEngine:
         from .grouped_sync import sync_one
         return sync_one(self, course, resource, index)
 
-    def run(self, run_id):
+    def run(self, run_id, course_ids=None, material_ids=None):
+        from . import catalog
+        excluded = 0
         counts = {"downloaded": 0, "skipped": 0, "failed": 0}
-        courses = [c for c in self.store.courses() if c["enabled"] and c["folder"]]
+        courses = [c for c in self.store.courses() if c["membership"] == "added" and c["folder"] and (c["enabled"] if course_ids is None else c["id"] in course_ids)]
         if not courses:
             raise ResourceError("请先为至少一门课程绑定目录并启用同步")
         for course in courses:
             try:
                 folder = Path(course["folder"]).resolve()
                 index = scan(folder)
+                with self.store.connect() as db:
+                    expected = set(material_ids) if material_ids is not None else ({r[0] for r in db.execute("SELECT id FROM materials WHERE course_id=? AND selected=1", (course["id"],))} if course["sync_mode"] == "selected" else set())
+                seen = set()
                 discovery = self.platform.discover(course["id"])
                 for error in discovery.errors:
                     counts["failed"] += 1
                     self.store.event(run_id, course["id"], course["name"], "failed", error)
                 for resource in discovery.resources:
+                    item = catalog.register(self.store, course["id"], resource)
+                    seen.add(item["id"])
+                    if (material_ids is not None and item["id"] not in material_ids) or (material_ids is None and course["sync_mode"] == "selected" and not item["selected"]):
+                        excluded += 1
+                        continue
+                    self.store.set("active_material", item["id"])
                     for attempt in range(4):  # Initial attempt plus at most three retries.
                         try:
                             status, message = self.one(course, resource, index)
@@ -84,13 +95,26 @@ class SyncEngine:
                                 self.store.event(run_id, course["id"], resource.name, "failed", safe_error(exc))
                             else:
                                 self.sleep(2 ** attempt)
+                    self.store.set("active_material", None)
+                for missing_id in expected - seen:
+                    missing = catalog.material(self.store, missing_id)
+                    message = "学校清单未找到已选资料，可能已删除或暂时不可访问；本地文件保留"
+                    counts["failed"] += 1
+                    self.store.event(run_id, course["id"], missing["name"], "failed", message)
+                    with self.store.connect() as db:
+                        db.execute("UPDATE materials SET status='failed',error=? WHERE id=?", (message, missing_id))
+                with self.store.connect() as db:
+                    from .state import now
+                    db.execute("UPDATE courses SET catalog_at=?,catalog_status=?,catalog_error=? WHERE id=?", (now(), "partial" if discovery.errors else "success", "；".join(discovery.errors), course["id"]))
             except LoginRequired:
+                self.store.set("active_material", None)
                 self.store.finish(run_id, "auth_required", **counts, message="登录过期，检查尚未完成，请重新登录后重试")
                 raise
             except Exception as exc:
                 counts["failed"] += 1
                 self.store.event(run_id, course["id"], course["name"], "failed", safe_error(exc))
+        self.store.set("active_material", None)
         status = "partial" if counts["failed"] else "success"
         pending_message = f"；{self.pending_organization} 项已有资料待确认整理" if self.pending_organization else ""
         self.store.finish(run_id, status, **counts, message="部分检查或下载失败，请查看详情并重试" if counts["failed"] else "已完成全部已绑定课程的检查" + pending_message)
-        return {"status": status, "pending_organization": self.pending_organization, "message": ("部分检查失败" if counts["failed"] else "课程检查完成") + pending_message, **counts}
+        return {"status": status, "not_selected": excluded, "pending_organization": self.pending_organization, "message": ("部分检查失败" if counts["failed"] else "课程检查完成") + pending_message, **counts}

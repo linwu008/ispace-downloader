@@ -64,18 +64,12 @@ def sync_one(engine, course, resource, index):
             if previous and etag and etag == previous["etag"] and verified(known, previous["digest"], root):
                 content_hash, source = previous["digest"], Path(known)
             else:
-                temporary_dir = root / ".ispace-temp"
-                temporary_dir.mkdir(exist_ok=True)
-                if temporary_dir.is_symlink() or not temporary_dir.resolve().is_relative_to(root):
-                    raise ValueError("临时目录不能越过课程目录")
-                handle, filename = tempfile.mkstemp(suffix=".part", dir=temporary_dir)
-                os.close(handle)
-                temporary = Path(filename)
-                headers = engine.platform.download(resource, temporary)
-                content_hash = digest(temporary)
-                source = index.get(content_hash)
-                if not verified(source, content_hash, root):
-                    source, fresh = temporary, True
+                from .previews import cached as preview_cached
+                preview = preview_cached(store, item["id"])
+                if preview and etag and preview["etag"] == etag:
+                    content_hash, source, fresh = preview["digest"], preview["path"], True
+                else:
+                    content_hash, source, headers, temporary, fresh = fetch_content(engine, root, resource, index)
         source = Path(source)
         own_path = item["path"] if verified(item["path"], content_hash, root) else None
         if own_path and Path(own_path).resolve().is_relative_to(folder.resolve()):
@@ -120,3 +114,26 @@ def sync_one(engine, course, resource, index):
     finally:
         if temporary:
             temporary.unlink(missing_ok=True)
+
+
+def fetch_content(engine, root, resource, index):
+    from .sync import digest
+    temporary = None
+    fresh = False
+    temporary_dir = root / ".ispace-temp"
+    temporary_dir.mkdir(exist_ok=True)
+    if temporary_dir.is_symlink() or not temporary_dir.resolve().is_relative_to(root):
+        raise ValueError("临时目录不能越过课程目录")
+    handle, filename = tempfile.mkstemp(suffix=".part", dir=temporary_dir)
+    os.close(handle)
+    temporary = Path(filename)
+    try:
+        headers = engine.platform.download(resource, temporary)
+        content_hash = digest(temporary)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
+    source = index.get(content_hash)
+    if not verified(source, content_hash, root):
+        source, fresh = temporary, True
+    return content_hash, source, headers, temporary, fresh
