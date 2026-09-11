@@ -11,17 +11,17 @@ function optionList(select, values, first) {
 }
 function updateLibraryFilters() {
   if(!libraryState)return;
-  const signature=JSON.stringify([libraryState.courses.map(c=>[c.id,c.name]),libraryState.groups.map(g=>[g.id,g.course_id,g.title]),$('filter-course').value]);
+  const signature=JSON.stringify([libraryState.courses.map(c=>[c.id,c.name]),libraryState.groups.map(g=>[g.id,g.course_id,g.title]),$('filter-course').value,$('include-removed').checked]);
   if(signature===libraryOptions)return;
   libraryOptions=signature;
-  optionList($('filter-course'),libraryState.courses.map(c=>[c.id,c.name]),'所有课程');
+  optionList($('filter-course'),libraryState.courses.filter(c=>$('include-removed').checked||c.membership==='added').map(c=>[c.id,c.name]),'所有课程');
   const course=$('filter-course').value;
   optionList($('filter-group'),libraryState.groups.filter(g=>!course||String(g.course_id)===course).map(g=>[g.id,g.title]),'所有分组');
 }
 async function loadLibrary() {
-  if(!libraryState)return;
+  if(!libraryState||$('library').hidden||$('material-list').contains(document.activeElement))return;
   const request=++libraryRequest;
-  const query=new URLSearchParams({q:$('file-search').value,page:libraryPage,page_size:20});
+  const query=new URLSearchParams({include_removed:String($('include-removed').checked),q:$('file-search').value,page:libraryPage,page_size:20});
   for(const [id,key] of [['filter-course','course_id'],['filter-group','group_id'],['filter-status','status']])if($(id).value)query.set(key,$(id).value);
   try {
     const data=await api('/materials?'+query);
@@ -42,7 +42,7 @@ async function loadLibrary() {
       const select=el('select');select.setAttribute('aria-label',`调整 ${item.name} 的分组`);
       libraryState.groups.filter(g=>g.course_id===item.course_id).forEach(g=>select.add(new Option(g.title,g.id)));select.value=item.group_id;
       const adjust=el('button','预览调整','text-button');adjust.onclick=async()=>{try{showOrganization(await api(`/materials/${item.id}/group`,'PUT',{group_id:select.value}));}catch(error){notice(error.message,true);transientUntil=Date.now()+6000;}};
-      const placement=el('div',undefined,'placement-control');placement.append(select,adjust);actions.append(locate,placement);
+      const placement=el('div',undefined,'placement-control');placement.append(select,adjust);const preview=el('button','预览','text-button');preview.onclick=()=>openFilePreview(item);actions.append(preview,locate,placement);
       row.append(name,context,status,actions);body.append(row);
     }
   } catch(error){notice(error.message,true);transientUntil=Date.now()+6000;}
@@ -61,7 +61,7 @@ function renderTeachingGroups(course, groups) {
     const buttons=el('div',undefined,'group-actions'),save=el('button','预览目录修改','text-button'),reset=el('button','恢复自动目录','text-button'),browse=el('button','查看资料','text-button');
     save.onclick=async()=>{try{showOrganization(await api(`/groups/${group.id}`,'PUT',{mode:'manual',folder:input.value.trim()}));}catch(error){notice(error.message,true);transientUntil=Date.now()+6000;}};
     reset.onclick=async()=>{try{showOrganization(await api(`/groups/${group.id}`,'PUT',{mode:'auto'}));}catch(error){notice(error.message,true);transientUntil=Date.now()+6000;}};
-    browse.onclick=()=>{$('filter-course').value=String(course.id);libraryOptions='';updateLibraryFilters();$('filter-group').value=group.id;libraryPage=1;loadLibrary();$('library').scrollIntoView({behavior:'smooth'});};
+    browse.onclick=()=>{$('filter-course').value=String(course.id);libraryOptions='';updateLibraryFilters();$('filter-group').value=group.id;libraryPage=1;loadLibrary();location.hash='/library';$('course-dialog').close();};
     buttons.append(save,reset,browse);row.append(heading,line,buttons);details.append(row);
   }
   return details;
@@ -110,3 +110,5 @@ window.addEventListener('ispace-state',event=>{
   $('organization-result').textContent=latest?latest.result.message:'整理操作独立记录，尚未执行已确认的整理。';
   if(!libraryState.busy)loadLibrary();
 });
+
+$('include-removed').onchange=()=>{libraryPage=1;libraryOptions='';updateLibraryFilters();loadLibrary();};

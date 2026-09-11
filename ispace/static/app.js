@@ -21,24 +21,7 @@ async function action(path, method='POST', body) {
     await refresh();
   } catch(error) { transientUntil = Date.now() + 6000; notice(error.message,true); }
 }
-function renderCourses(courses, groups=[]) {
-  const signature=JSON.stringify([courses,groups]);
-  if(signature===courseSignature)return;
-  courseSignature=signature;
-  if(!courses.length)return;
-  const container=$('course-list');const openGroups=new Set([...container.querySelectorAll('details[open]')].map(d=>d.dataset.courseId));container.replaceChildren();
-  for(const course of courses) {
-    const row=el('article',undefined,'course'), info=el('div');
-    info.append(el('div',course.name,'course-title'),el('div',`课程 ${course.id} · ${course.folder?'已绑定专用文件夹':'等待绑定文件夹'}`,'course-meta'));
-    const controls=el('div'), field=el('div',undefined,'folder-row');
-    const input=el('input');input.value=course.folder||'';input.placeholder='选择文件夹或粘贴绝对路径';input.setAttribute('aria-label',`${course.name}的文件夹`);
-    const choose=el('button','选择文件夹','secondary');choose.type='button';choose.onclick=async()=>{choose.disabled=true;try{const data=await api('/folder','POST');if(data.folder)input.value=data.folder;}catch(error){notice(error.message,true);}finally{choose.disabled=false;}};
-    field.append(input,choose);
-    const options=el('div',undefined,'course-options'),label=el('label'),enabled=el('input');enabled.type='checkbox';enabled.checked=course.folder?Boolean(course.enabled):true;label.append(enabled,document.createTextNode(' 启用这门课的同步'));
-    const save=el('button','保存绑定','text-button');save.type='button';save.onclick=()=>action(`/courses/${course.id}`,'PUT',{folder:input.value.trim(),enabled:enabled.checked});
-    options.append(label,save);controls.append(field,options);row.append(info,controls);if(course.folder){const details=renderTeachingGroups(course,groups.filter(g=>g.course_id===course.id));details.open=openGroups.has(String(course.id));row.append(details);}container.append(row);
-  }
-}
+function renderCourses(courses, groups=[]) { renderCourseCards(courses,groups); }
 function renderEvents(events) {
   const body=$('events');body.replaceChildren();
   if(!events.length){const row=el('tr'),cell=el('td','还没有同步记录','empty-row');cell.colSpan=4;row.append(cell);body.append(row);return;}
@@ -50,15 +33,15 @@ async function refresh() {
     for(const id of ['sync','refresh-courses','manual-login','logout'])$(id).disabled=busy;
     $('login-form').querySelector('button[type=submit]').disabled=busy;
     $('sync').textContent=busy?'处理中…':'↻ 立即检查';
-    const bound=state.courses.filter(c=>c.enabled&&c.folder).length;
+    const bound=state.courses.filter(c=>c.membership==='added'&&c.enabled&&c.folder).length;
     $('sync').disabled=busy||bound===0;
     if(!busy&&bound===0)$('sync').textContent='先绑定课程目录';
-    $('bound-count').textContent=bound;$('course-count').textContent=state.courses.length;
+    $('bound-count').textContent=bound;$('course-count').textContent=state.courses.filter(c=>c.membership==='added').length;
     const latest=state.runs[0];
     $('download-count').textContent=latest?latest.downloaded:'—';$('failed-count').textContent=latest?latest.failed:'—';
     $('last-check').textContent=latest?`${labels[latest.status]||latest.status} · ${formatTime(latest.finished||latest.started)}`:'尚未执行检查';
     $('next-time').textContent=state.schedule.enabled?state.schedule.time:'未开启';
-    $('next-date').textContent=state.schedule.enabled?formatTime(state.schedule.next):'在下方设置每日检查';
+    $('next-date').textContent=state.schedule.enabled?formatTime(state.schedule.next):'在设置页开启每日检查';
     const logged=state.auth==='logged_in';$('auth-badge').textContent=logged?'已连接（最近验证）':state.auth==='auth_required'?'需要重新登录':'未登录';$('auth-badge').className='badge '+(logged?'success':'neutral');
     if(!scheduleReady){$('schedule-time').value=state.schedule.time;$('schedule-enabled').checked=state.schedule.enabled;scheduleReady=true;}
     renderCourses(state.courses,state.groups||[]);renderEvents(state.events);

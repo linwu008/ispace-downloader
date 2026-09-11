@@ -1,43 +1,45 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>iSpace · 学习资料</title><link rel="stylesheet" href="/static/style.css"><script defer src="/static/app.js"></script><script defer src="/static/library.js"></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>iSpace · 学习资料</title><link rel="stylesheet" href="/static/style.css"><script defer src="/static/app.js"></script><script defer src="/static/library.js"></script><script defer src="/static/workspace.js"></script></head>
 <body>
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar"><button id="mobile-menu" class="secondary mobile-menu" aria-expanded="false" aria-controls="sidebar">菜单</button>
   <a class="brand" href="/"><span class="brand-icon">i</span><span>iSpace<span class="brand-sub">学习资料助手</span></span></a>
   <div class="nav-label">工作空间</div>
-  <a class="nav active" href="#overview"><span>▦</span> 资料总览</a>
-  <a class="nav" href="#courses"><span>▤</span> 我的课程</a>
-  <a class="nav" href="#library"><span>⌕</span> 分组资料库</a>
-  <a class="nav" href="#history"><span>↻</span> 同步记录</a>
-  <a class="nav" href="#settings"><span>⚙</span> 账号与计划</a>
-  <div class="sidebar-bottom"><span class="local-dot"></span> 本机工作空间<p>资料留在你的电脑上<br>v0.2 · BNBU iSpace</p></div>
+  <a class="nav active" href="#/overview"><span>▦</span> 总览</a>
+  <a class="nav" href="#/courses"><span>▤</span> 我的课程</a>
+  <a class="nav" href="#/library"><span>⌕</span> 资料库</a>
+  <a class="nav" href="#/history"><span>↻</span> 任务记录</a>
+  <a class="nav" href="#/settings"><span>⚙</span> 设置</a>
+  <div class="sidebar-bottom"><span class="local-dot"></span> 本机工作空间<p>资料留在你的电脑上<br>v0.3 试用版 · BNBU iSpace</p></div>
 </aside>
-<main id="overview">
-  <header><div class="breadcrumb">工作空间 <span>/</span> 资料总览</div><span class="chip">本地运行</span></header>
-  <section class="heading"><div><div class="eyebrow">A LITTLE LESS BUSYWORK</div><h1>把时间留给学习。</h1><p>课程资料自动归位，每一次更新都有记录。</p></div><button id="sync" class="primary">↻&nbsp; 立即检查</button></section>
+<main>
+  <header><div class="breadcrumb">工作空间 <span>/</span> 总览</div><span class="chip">本地运行</span></header>
+  <section class="page-heading"><div><div class="eyebrow">iSpace · 学习资料</div><h1 id="page-title">总览</h1></div><button id="sync" class="primary">立即检查</button></section>
   <div id="notice" class="notice" role="status" aria-live="polite">正在读取工作空间…</div>
-  <section class="metrics" aria-label="同步概况">
+  <div id="overview" class="page-view"><section class="metrics" aria-label="同步概况">
     <article><div class="metric-label">已绑定课程 <span>▤</span></div><strong id="bound-count">0</strong><small>每门课都有自己的位置</small></article>
     <article><div class="metric-label">最近新增 <span>↓</span></div><strong id="download-count">—</strong><small id="last-check">尚未执行检查</small></article>
     <article><div class="metric-label">需要处理 <span>◷</span></div><strong id="failed-count">—</strong><small>失败项目可重新检查</small></article>
-    <article class="schedule-metric"><div class="metric-label">下一次检查 <span>↗</span></div><strong id="next-time">未开启</strong><small id="next-date">在下方设置每日检查</small></article>
+    <article class="schedule-metric"><div class="metric-label">下一次检查 <span>↗</span></div><strong id="next-time">未开启</strong><small id="next-date">在设置页开启每日检查</small></article>
   </section>
-  <section id="courses" class="panel">
-    <div class="section-head"><div><h2>我的课程 <span id="course-count" class="count">0</span></h2><p>为需要同步的课程选择专用文件夹，已有资料会自动参与比对。</p></div><button id="refresh-courses" class="secondary">刷新课程</button></div>
-    <div id="course-list" class="course-list"><div class="empty"><div class="empty-symbol">▤</div><h3>从第一门课开始</h3><p>先连接学校账号，再刷新课程列表。</p><a href="#settings">连接 iSpace →</a></div></div>
+  <section class="panel overview-actions"><h2>从课程开始</h2><p>按教学进度找资料，选择你需要的文件。</p><div class="button-row"><a class="primary" href="#/courses">打开我的课程</a><a class="secondary" href="#/library">搜索资料</a></div></section></div>
+  <section id="courses" class="panel page-view" hidden>
+    <div class="section-head"><div><h2>我的课程 <span id="course-count" class="count">0</span></h2><p>点开课程，按分组选择和预览学习资料。</p></div><div class="button-row"><button id="refresh-courses" class="secondary">刷新学校列表</button><button id="add-course" class="primary">添加课程</button></div></div>
+    <div id="course-list" class="course-grid"><div class="empty"><div class="empty-symbol">▤</div><h3>从第一门课开始</h3><p>先连接学校账号，再刷新课程列表。</p><a href="#/settings">连接 iSpace →</a></div></div>
   </section>
-  <section id="library" class="panel">
-    <div class="section-head"><div><h2>分组资料库 <span id="material-total" class="count">0</span></h2><p>按教学进度找资料，已有文件先预览再整理。</p></div><button id="preview-organization" class="secondary">预览整理已有资料</button></div>
-    <div class="library-filters"><input id="file-search" type="search" placeholder="搜索文件名、课程或 Week／课次" aria-label="搜索资料"><select id="filter-course" aria-label="筛选课程"><option value="">所有课程</option></select><select id="filter-group" aria-label="筛选分组"><option value="">所有分组</option></select><select id="filter-status" aria-label="筛选状态"><option value="">所有状态</option><option value="pending_organize">待整理</option><option value="downloaded">已下载</option><option value="existing">已存在</option><option value="missing">本地缺失</option><option value="failed">检查失败</option></select></div>
+  <section id="library" class="panel page-view" hidden>
+    <div class="section-head"><div><h2>资料库 <span id="material-total" class="count">0</span></h2><p>按教学进度找资料，已有文件先预览再整理。</p></div><button id="preview-organization" class="secondary">预览整理已有资料</button></div>
+    <label class="removed-filter"><input id="include-removed" type="checkbox"> 包含已移出的课程资料</label><div class="library-filters"><input id="file-search" type="search" placeholder="搜索文件名、课程或 Week／课次" aria-label="搜索资料"><select id="filter-course" aria-label="筛选课程"><option value="">所有课程</option></select><select id="filter-group" aria-label="筛选分组"><option value="">所有分组</option></select><select id="filter-status" aria-label="筛选状态"><option value="">所有状态</option><option value="pending_organize">待整理</option><option value="downloaded">已下载</option><option value="existing">已存在</option><option value="missing">本地缺失</option><option value="failed">检查失败</option></select></div>
     <div class="table-scroll"><table><thead><tr><th>资料与本地位置</th><th>分组 / 课程</th><th>状态</th><th>操作</th></tr></thead><tbody id="material-list"></tbody></table></div>
     <div class="library-pagination"><span id="page-number">第 1 页</span><div><button id="previous-page" class="secondary">上一页</button> <button id="next-page" class="secondary">下一页</button></div></div>
     <p id="organization-result" class="organization-result">尚未执行整理。</p>
   </section>
-  <section id="history" class="panel">
-    <div class="section-head"><div><h2>同步记录</h2><p>新增、已有和未完成的项目都会在这里显示。</p></div><span class="subtle">最近 200 条</span></div>
-    <div class="table-scroll"><table><thead><tr><th>文件 / 课程</th><th>状态</th><th>详情</th><th>时间</th></tr></thead><tbody id="events"><tr><td colspan="4" class="empty-row">还没有同步记录</td></tr></tbody></table></div>
+  <section id="history" class="panel page-view" hidden>
+    <div class="section-head"><div><h2>任务记录</h2><p>新增、已有和未完成的项目都会在这里显示。</p></div><span class="subtle">最近 200 条</span></div>
+    <div class="table-scroll"><table><thead><tr><th>文件 / 课程</th><th>状态</th><th>详情</th><th>时间</th></tr></thead><tbody id="events"><tr><td colspan="4" class="empty-row">还没有任务记录</td></tr></tbody></table></div>
+    <div class="section-head"><h2>整理记录</h2></div><div id="organization-history"></div>
   </section>
-  <section id="settings" class="settings-grid">
+  <section id="settings" class="settings-grid page-view" hidden>
     <article class="panel settings-card"><h2>连接学校账号 <span id="auth-badge" class="badge neutral">未登录</span></h2><p>连接 ispace.bnbu.edu.cn，凭据加密保存在当前 Windows 账户下。</p>
       <form id="login-form"><label for="username">学校账号</label><input id="username" autocomplete="username" required placeholder="输入你的 iSpace 账号"><label for="password">密码</label><input id="password" type="password" autocomplete="current-password" required placeholder="输入密码"><div class="button-row"><button type="submit" class="primary">登录并记住</button><button type="button" id="manual-login" class="secondary">手动登录窗口</button></div></form>
       <p class="hint">有验证码时使用手动窗口。登录状态过期后会尝试重新连接。</p><button id="logout" class="text-button">清除本机凭据与登录状态</button>
@@ -47,7 +49,15 @@
       <div class="note-card"><strong>只收新内容，保留旧版本。</strong><p>首次比对时可能临时下载核验。相同内容不会留下重复副本；老师更新同名文件时会保留新旧版本。</p></div>
     </article>
   </section>
-  <footer>为你的学习资料，留一个井井有条的位置。<span>iSpace Downloader / v0.2</span></footer>
+  <footer>资料保存在本机<span>iSpace Downloader / v0.3 试用版</span></footer>
 </main>
 <dialog id="organization-dialog" aria-labelledby="preview-title"><div class="section-head"><h2 id="preview-title">确认资料整理方案</h2><button id="close-preview" class="secondary">关闭</button></div><p id="preview-description" class="dialog-note"></p><div class="preview-tools"><button id="select-preview" class="text-button">全选可执行项</button><button id="clear-preview" class="text-button">取消选择</button></div><div class="table-scroll preview-table"><table><thead><tr><th>选择</th><th>资料 / 操作</th><th>原位置</th><th>目标位置</th><th>说明</th></tr></thead><tbody id="preview-rows"></tbody></table></div><p id="preview-empty" class="empty-row" hidden>当前没有需要整理的已关联资料。</p><div class="dialog-footer"><span>执行前会再次核对文件和设置，已有文件不会被覆盖。</span><button id="execute-organization" class="primary">确认并执行所选项目</button></div></dialog>
+
+<dialog id="add-course-dialog" aria-labelledby="add-title"><div class="section-head"><h2 id="add-title">添加课程</h2><button class="secondary" data-close="add-course-dialog">关闭</button></div><div class="dialog-body"><input id="course-search" type="search" placeholder="搜索学校课程" aria-label="搜索学校课程"><div id="available-courses"></div></div><div class="dialog-footer"><span>加入后可浏览资料；下载前再绑定目录。</span><button id="confirm-add" class="primary">添加所选课程</button></div></dialog>
+<dialog id="course-dialog" aria-labelledby="course-dialog-title"><div class="section-head"><div><span class="eyebrow">我的课程</span><h2 id="course-dialog-title">课程资料</h2></div><button class="secondary" data-close="course-dialog">关闭</button></div>
+<div class="dialog-body"><div id="course-message" class="notice" role="status"></div><div class="course-toolbar"><input id="course-file-search" type="search" placeholder="搜索本课程文件或分组" aria-label="搜索课程资料"><button id="refresh-catalog" class="secondary">刷新文件清单</button></div>
+<details id="course-settings"><summary>课程目录与同步设置</summary><div class="course-settings-body"><label for="course-folder">课程专用目录</label><div class="folder-row"><input id="course-folder" placeholder="尚未绑定，仍可浏览资料"><button id="choose-course-folder" class="secondary">选择目录</button></div><label class="check-label"><input id="course-enabled" type="checkbox"> 参与每日自动检查</label><button id="save-course-folder" class="secondary">保存目录与计划</button><div id="group-settings"></div><button id="remove-course" class="text-button danger">移出我的课程（保留本地文件）</button></div></details>
+<div class="selection-mode"><label for="course-mode">下载范围</label><select id="course-mode"><option value="selected">仅同步所选文件</option><option value="all">整门课自动下载</option></select><span id="selection-note" role="status"></span></div><div id="course-group-list"></div></div>
+<div class="dialog-footer"><span id="selection-count">尚未选择文件</span><div class="button-row"><button id="save-selection" class="secondary">保存选择</button><button id="download-selected" class="primary">下载已选</button></div></div></dialog>
+<dialog id="file-preview-dialog" aria-labelledby="file-preview-title"><div class="section-head"><h2 id="file-preview-title">文件预览</h2><button class="secondary" data-close="file-preview-dialog">关闭</button></div><p id="file-preview-note" class="dialog-note" role="status"></p><div id="file-preview-body" class="file-preview-body"></div><div class="dialog-footer"><span>预览不会改变文件选择。</span><div class="button-row"><button id="preview-locate" class="secondary">定位本地文件</button><button id="preview-download" class="primary">下载此文件</button></div></div></dialog>
 </body></html>
