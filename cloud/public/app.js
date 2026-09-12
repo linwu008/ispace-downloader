@@ -1,0 +1,630 @@
+"use strict";
+const $ = (id) => document.getElementById(id),
+  el = (tag, value, cls) => {
+    const n = document.createElement(tag);
+    if (value !== undefined) n.textContent = value;
+    if (cls) n.className = cls;
+    return n;
+  };
+const names = {
+  overview: "总览",
+  courses: "我的课程",
+  devices: "我的设备",
+  history: "任务记录",
+  settings: "设置",
+};
+const statuses = {
+  queued: "等待设备执行",
+  running: "正在执行",
+  success: "已完成",
+  partial: "部分完成",
+  failed: "失败",
+  auth_required: "请在助手重新登录",
+  canceled: "已撤销",
+  downloaded: "已下载",
+  existing: "已下载",
+  missing: "本地缺失",
+  pending: "未下载",
+  pending_organize: "待整理",
+  skipped: "已下载",
+};
+const kinds = {
+  refresh_courses: "刷新学校课程",
+  add_courses: "添加课程",
+  remove_courses: "移出课程",
+  catalog: "更新资料清单",
+  selection: "保存文件选择",
+  sync: "同步学习资料",
+};
+let state = null,
+  jobs = [],
+  register = false,
+  current = null,
+  draft = new Set(),
+  mode = "selected",
+  dirty = false,
+  scheduleDirty = false,
+  availableSelected = new Set(),
+  noticeUntil = 0,
+  lastSnapshot = -1;
+const time = (value) =>
+  value
+    ? new Date(typeof value === "number" ? value * 1000 : value).toLocaleString(
+        "zh-CN",
+      )
+    : "尚未连接";
+async function api(path, method = "GET", body) {
+  const res = await fetch("/api" + path, {
+    method,
+    headers: {
+      ...(body ? { "Content-Type": "application/json" } : {}),
+      ...(state?.csrf ? { "X-CSRF-Token": state.csrf } : {}),
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  const value = await res.json();
+  if (!res.ok) {
+    if (res.status === 401 && !path.startsWith("/auth/")) signedOut();
+    throw Error(value.detail || "请求失败");
+  }
+  return value;
+}
+function notice(message, error = false) {
+  $("notice").hidden = false;
+  $("notice").textContent = message;
+  $("notice").className = "notice" + (error ? " error" : "");
+  noticeUntil = Date.now() + 15000;
+}
+function fail(e) {
+  notice(e.message, true);
+  const dialog = document.querySelector("dialog[open]");
+  if (dialog) {
+    let node = dialog.querySelector(".dialog-notice");
+    if (!node) {
+      node = el("p", undefined, "notice error dialog-notice");
+      node.setAttribute("role", "alert");
+      dialog.querySelector(".dialog-body").prepend(node);
+    }
+    node.textContent = e.message;
+    node.scrollIntoView({ block: "nearest" });
+  }
+}
+function signedOut() {
+  lastSnapshot = -1;
+  state = null;
+  current = null;
+  dirty = false;
+  draft.clear();
+  scheduleDirty = false;
+  jobs = [];
+  $("workspace").hidden = true;
+  $("welcome").hidden = false;
+  for (const d of document.querySelectorAll("dialog[open]")) d.close();
+}
+function snapshot() {
+  return state?.device?.snapshot || { courses: [], groups: [], materials: [] };
+}
+function courses() {
+  return snapshot().courses || [];
+}
+function files() {
+  return snapshot().materials || [];
+}
+function groups() {
+  return snapshot().groups || [];
+}
+function route() {
+  const page = location.hash.slice(2) || "overview";
+  const chosen = names[page] ? page : "overview";
+  document
+    .querySelectorAll("[data-page]")
+    .forEach((n) => (n.hidden = n.dataset.page !== chosen));
+  document
+    .querySelectorAll("nav a")
+    .forEach((n) => n.classList.toggle("active", n.hash === "#/" + chosen));
+  $("page-title").textContent = names[chosen];
+  $("breadcrumb").textContent = "工作空间 / " + names[chosen];
+  document.title = names[chosen] + " · BNBU CourseNest";
+  $("sidebar").classList.remove("open");
+}
+window.addEventListener("hashchange", route);
+$("mobile-menu").onclick = () => $("sidebar").classList.toggle("open");
+function switchAuth(value) {
+  register = value;
+  $("login-tab").classList.toggle("active", !value);
+  $("register-tab").classList.toggle("active", value);
+  $("invite-field").hidden = !value;
+  $("invite").required = value;
+  $("auth-title").textContent = value ? "创建你的学习空间" : "欢迎回到课巢";
+  $("auth-submit").textContent = value ? "创建账号" : "登录工作空间";
+  $("password").autocomplete = value ? "new-password" : "current-password";
+  $("auth-note").textContent = "";
+}
+$("login-tab").onclick = () => switchAuth(false);
+$("register-tab").onclick = () => switchAuth(true);
+$("auth-form").onsubmit = async (event) => {
+  event.preventDefault();
+  $("auth-submit").disabled = true;
+  try {
+    await api(register ? "/auth/register" : "/auth/login", "POST", {
+      email: $("email").value.trim(),
+      password: $("password").value,
+      invite: $("invite").value,
+    });
+    $("password").value = "";
+    await refresh();
+  } catch (e) {
+    $("auth-note").textContent = e.message;
+  } finally {
+    $("auth-submit").disabled = false;
+  }
+};
+$("logout").onclick = async () => {
+  try {
+    await api("/auth/logout", "POST");
+    signedOut();
+  } catch (e) {
+    fail(e);
+  }
+};
+async function queue(kind, payload = {}) {
+  const result = await api("/jobs", "POST", {
+    kind,
+    payload,
+    request_id: crypto.randomUUID(),
+  });
+  notice(
+    state?.device?.online
+      ? "任务已交给同步助手，完成后会更新状态。"
+      : "任务已保存，电脑恢复在线后执行。",
+  );
+  await refresh();
+  return result;
+}
+function renderCourses() {
+  const box = $("course-grid");
+  box.replaceChildren();
+  for (const c of courses().filter((c) => c.membership === "added")) {
+    const card = el("button", undefined, "course-card");
+    card.dataset.courseId = c.id;
+    card.append(
+      el("span", "▤", "eyebrow"),
+      el("h3", c.name),
+      el(
+        "small",
+        `${groups().filter((g) => g.course_id === c.id).length} 个分组 · ${files().filter((f) => f.course_id === c.id && ["downloaded", "existing", "skipped"].includes(f.status)).length} 份已保存`,
+      ),
+      el(
+        "span",
+        !c.bound
+          ? "等待本地授权目录"
+          : c.sync_mode === "all"
+            ? "整门课自动下载"
+            : "仅同步所选文件",
+        "pill",
+      ),
+    );
+    card.onclick = () => openCourse(c.id);
+    box.append(card);
+  }
+  if (!box.children.length)
+    box.append(
+      el(
+        "div",
+        state.device
+          ? "还没有加入课程。先刷新学校列表，再添加需要的课程。"
+          : "配对电脑后，你的课程会出现在这里。",
+        "empty",
+      ),
+    );
+}
+function renderDevice() {
+  const box = $("device-detail");
+  box.replaceChildren();
+  const d = state.device;
+  $("new-pair").disabled = !!d;
+  if (d) {
+    const row = el("div", undefined, "device-name"),
+      copy = el("div");
+    copy.append(
+      el("strong", d.name),
+      el("p", `${d.online ? "在线" : "离线"} · 最近连接 ${time(d.last_seen)}`),
+    );
+    row.append(copy);
+    const remove = el("button", "解除配对", "secondary");
+    remove.onclick = async () => {
+      if (
+        !confirm(
+          "解除后停止接收网站任务，已下载的本地文件保留。确认解除这台电脑？",
+        )
+      )
+        return;
+      try {
+        await api("/device", "DELETE");
+        $("pair-code").textContent = "";
+        await refresh();
+        notice("设备授权已撤销，本地文件保留。");
+      } catch (e) {
+        fail(e);
+      }
+    };
+    row.append(remove);
+    box.append(row);
+  } else
+    box.append(el("p", "尚未配对设备。请按下方步骤连接一台 Windows 电脑。"));
+}
+function jobTitle(job) {
+  const c = courses().find((c) => c.id === job.payload.course_id);
+  return kinds[job.kind] + (c ? " · " + c.name : "");
+}
+function renderJobs() {
+  const box = $("job-list");
+  box.replaceChildren();
+  for (const job of jobs) {
+    const row = el("article", undefined, "job"),
+      copy = el("div");
+    copy.append(
+      el("h3", jobTitle(job)),
+      el(
+        "p",
+        job.result.message ||
+          (job.status === "queued"
+            ? "等待同步助手领取，尚未执行。"
+            : job.status === "running"
+              ? "电脑正在处理，请稍候。"
+              : ""),
+      ),
+      el("small", time(job.created)),
+    );
+    row.append(
+      copy,
+      el(
+        "span",
+        statuses[job.status] || job.status,
+        "pill " + (job.status === "failed" ? "failed" : ""),
+      ),
+    );
+    if (["failed", "partial", "auth_required"].includes(job.status)) {
+      const retry = el("button", "重新执行", "text-button");
+      retry.onclick = () => queue(job.kind, job.payload).catch(fail);
+      copy.append(retry);
+    }
+    box.append(row);
+  }
+  if (!jobs.length) box.append(el("p", "还没有网站任务。", "empty"));
+}
+async function refresh() {
+  try {
+    const value = await api("/me");
+    state = value;
+    $("welcome").hidden = true;
+    $("workspace").hidden = false;
+    $("account-label").textContent = value.user.email;
+    route();
+    jobs = (await api("/jobs")).items;
+    const d = value.device,
+      s = snapshot();
+    $("connection").textContent = d
+      ? s.paused
+        ? "助手已暂停"
+        : d.online
+          ? "电脑在线"
+          : "电脑离线"
+      : "尚未配对";
+    $("connection").className = "pill" + (!d?.online ? " offline" : "");
+    $("metric-courses").textContent = courses().filter(
+      (c) => c.membership === "added",
+    ).length;
+    $("metric-files").textContent = files().filter((f) =>
+      ["downloaded", "existing", "skipped"].includes(f.status),
+    ).length;
+    $("metric-jobs").textContent = jobs.filter((j) =>
+      ["queued", "running"].includes(j.status),
+    ).length;
+    $("metric-time").textContent = d?.schedule.enabled
+      ? d.schedule.time
+      : "未开启";
+    $("snapshot-at").textContent = d ? "清单更新于 " + time(s.at) : "";
+    $("sync-all").disabled = !d;
+    $("refresh-courses").disabled = !d;
+    $("add-courses").disabled = !d;
+    $("next-title").textContent = d
+      ? `${d.name}，${d.online ? "已准备好" : "等待上线"}`
+      : "连接你的学习电脑";
+    $("next-copy").textContent = d
+      ? "从课程页选择想同步的资料。浏览器关闭后，正在运行的助手也会继续完成任务。"
+      : "配对同步助手后，课程与本地保存状态会出现在这里。";
+    if (!scheduleDirty) {
+      $("schedule-enabled").checked = !!d?.schedule.enabled;
+      $("schedule-time").value = d?.schedule.time || "20:00";
+    }
+    $("local-schedule-note").textContent = s.local_schedule
+      ? "该电脑原有每日计划仍开启。请先在同步助手中关闭，再启用网站计划，避免重复检查。"
+      : "任务执行时，电脑需要开机联网且助手正在运行。";
+    renderDevice();
+    renderJobs();
+    const snapshotKey = JSON.stringify(s);
+    if (snapshotKey !== lastSnapshot) {
+      renderCourses();
+      lastSnapshot = snapshotKey;
+      if (current && !dirty && $("course-dialog").open) {
+        const c = courses().find((c) => c.id === current);
+        if (c) {
+          draft = new Set(
+            files()
+              .filter(
+                (f) =>
+                  f.course_id === current &&
+                  (f.selected || c.sync_mode === "all"),
+              )
+              .map((f) => f.id),
+          );
+          mode = c.sync_mode;
+          $("course-mode").value = mode;
+          renderGroups();
+        }
+      }
+    }
+    if (Date.now() > noticeUntil) {
+      if (s.auth === "auth_required")
+        notice("学校登录已过期，请在本地同步助手重新登录。", true);
+      else $("notice").hidden = true;
+    }
+  } catch (e) {
+    if (state) fail(e);
+  }
+}
+$("new-pair").onclick = async () => {
+  try {
+    const p = await api("/pairings", "POST");
+    $("pair-code").textContent = p.code;
+    $("pair-code").append(
+      el("p", "10 分钟内有效 · 网站地址：" + location.origin, "hint"),
+    );
+  } catch (e) {
+    fail(e);
+  }
+};
+$("refresh-courses").onclick = () => queue("refresh_courses").catch(fail);
+$("sync-all").onclick = () => queue("sync").catch(fail);
+function renderAvailable() {
+  const box = $("available-courses");
+  box.replaceChildren();
+  const q = $("course-search").value.toLowerCase();
+  for (const c of courses().filter(
+    (c) => c.membership !== "added" && c.name.toLowerCase().includes(q),
+  )) {
+    const row = el("label", undefined, "check"),
+      check = el("input");
+    check.type = "checkbox";
+    check.checked = availableSelected.has(c.id);
+    check.onchange = () =>
+      check.checked
+        ? availableSelected.add(c.id)
+        : availableSelected.delete(c.id);
+    row.append(check, el("span", c.name));
+    box.append(row);
+  }
+  if (!box.children.length)
+    box.append(el("p", "没有其他课程。可先关闭浮窗，刷新学校列表。", "empty"));
+}
+$("add-courses").onclick = () => {
+  availableSelected.clear();
+  $("course-search").value = "";
+  renderAvailable();
+  $("add-dialog").showModal();
+};
+$("course-search").oninput = renderAvailable;
+$("confirm-add").onclick = async () => {
+  try {
+    if (!availableSelected.size) throw Error("请至少选择一门课程");
+    await queue("add_courses", { ids: [...availableSelected] });
+    $("add-dialog").close();
+  } catch (e) {
+    fail(e);
+  }
+};
+function key() {
+  return `coursenest-draft:${state.user.email}:${state.device.id}:${current}`;
+}
+function persist() {
+  dirty = true;
+  sessionStorage.setItem(key(), JSON.stringify({ ids: [...draft], mode }));
+  $("selection-count").textContent = `${draft.size} 份已选 · 尚未保存`;
+}
+function openCourse(id) {
+  document.querySelectorAll(".dialog-notice").forEach((n) => n.remove());
+  current = id;
+  const c = courses().find((c) => c.id === id);
+  mode = c.sync_mode;
+  draft = new Set(
+    files()
+      .filter((f) => f.course_id === id && (f.selected || mode === "all"))
+      .map((f) => f.id),
+  );
+  dirty = false;
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(key()));
+    if (saved) {
+      draft = new Set(
+        saved.ids.filter((id) =>
+          files().some((f) => f.id === id && f.course_id === current),
+        ),
+      );
+      mode = saved.mode;
+      dirty = true;
+    }
+  } catch {}
+  $("course-title").textContent = c.name;
+  $("course-mode").value = mode;
+  $("file-search").value = "";
+  $("course-note").textContent = c.bound
+    ? "文件保存到配对电脑的授权目录。内容预览和目录修改在本地助手中进行。"
+    : "可以浏览和选择资料；正式同步前，请在本地助手为该课程授权目录。";
+  renderGroups();
+  $("course-dialog").showModal();
+}
+function renderGroups() {
+  const box = $("group-list"),
+    opened = new Set(
+      [...box.querySelectorAll("details[open]")].map((n) => n.dataset.group),
+    );
+  box.replaceChildren();
+  const q = $("file-search").value.toLowerCase();
+  for (const g of groups()
+    .filter((g) => g.course_id === current)
+    .sort((a, b) => a.position - b.position)) {
+    const members = files().filter(
+      (f) => f.course_id === current && f.group_id === g.id,
+    );
+    const shown = members.filter((f) =>
+      (f.name + " " + g.title).toLowerCase().includes(q),
+    );
+    if (!shown.length) continue;
+    const details = el("details", undefined, "group");
+    details.dataset.group = g.id;
+    details.open = !!q || opened.has(g.id) || opened.size === 0;
+    details.append(el("summary", `${g.title} · ${members.length} 份`));
+    const tools = el("div", undefined, "group-tools");
+    for (const [label, choose] of [
+      ["选择本组", true],
+      ["取消本组", false],
+    ]) {
+      const button = el("button", label, "text-button");
+      button.onclick = () => {
+        mode = "selected";
+        $("course-mode").value = mode;
+        members.forEach((f) => (choose ? draft.add(f.id) : draft.delete(f.id)));
+        persist();
+        renderGroups();
+      };
+      tools.append(button);
+    }
+    details.append(tools);
+    for (const f of shown) {
+      const row = el("div", undefined, "file-row"),
+        label = el("label"),
+        check = el("input");
+      check.type = "checkbox";
+      check.checked = draft.has(f.id);
+      check.onchange = () => {
+        mode = "selected";
+        $("course-mode").value = mode;
+        check.checked ? draft.add(f.id) : draft.delete(f.id);
+        persist();
+      };
+      label.append(check, el("span", f.name));
+      const location = el("button", "查看位置", "text-button");
+      location.onclick = () => showLocation(f, g);
+      row.append(
+        label,
+        el("span", statuses[f.status] || f.status, "pill"),
+        location,
+      );
+      details.append(row);
+    }
+    box.append(details);
+  }
+  if (!box.children.length)
+    box.append(
+      el(
+        "p",
+        q
+          ? "没有匹配资料。"
+          : "尚无资料清单，点击“更新资料清单”由助手读取，不会自动下载。",
+        "empty",
+      ),
+    );
+  $("selection-count").textContent =
+    `${draft.size} 份已选${dirty ? " · 尚未保存" : ""}`;
+}
+$("file-search").oninput = renderGroups;
+$("course-mode").onchange = () => {
+  mode = $("course-mode").value;
+  if (mode === "all")
+    files()
+      .filter((f) => f.course_id === current)
+      .forEach((f) => draft.add(f.id));
+  persist();
+  renderGroups();
+};
+async function saveChoice(sync = false) {
+  const button = $(sync ? "download-choice" : "save-choice");
+  button.disabled = true;
+  try {
+    await queue("selection", { course_id: current, ids: [...draft], mode });
+    sessionStorage.removeItem(key());
+    dirty = false;
+    $("selection-count").textContent = "选择已提交，等待助手应用";
+    if (sync) await queue("sync", { course_id: current });
+  } catch (e) {
+    fail(e);
+  } finally {
+    button.disabled = false;
+  }
+}
+$("save-choice").onclick = () => saveChoice();
+$("download-choice").onclick = () => saveChoice(true);
+$("read-catalog").onclick = () =>
+  queue("catalog", { course_id: current }).catch(fail);
+$("remove-course").onclick = async () => {
+  if (!confirm("移出后停止该课程同步，已下载文件保留。")) return;
+  try {
+    await queue("remove_courses", { ids: [current] });
+    $("course-dialog").close();
+  } catch (e) {
+    fail(e);
+  }
+};
+function showLocation(f, g) {
+  const box = $("location-body");
+  box.replaceChildren();
+  box.append(
+    el("h3", f.name),
+    el(
+      "p",
+      courses().find((c) => c.id === f.course_id)?.name + " / " + g.title,
+    ),
+  );
+  box.append(el("div", f.path || "该文件尚未保存到本地。", "path"));
+  box.append(
+    el(
+      "p",
+      "这是同步助手最近上报的位置。文件位于 " +
+        state.device.name +
+        "；打开该电脑上的助手可预览内容并在资源管理器中定位。",
+      "hint",
+    ),
+  );
+  $("location-dialog").showModal();
+}
+document
+  .querySelectorAll("[data-close]")
+  .forEach(
+    (button) => (button.onclick = () => $(button.dataset.close).close()),
+  );
+$("schedule-enabled").onchange = $("schedule-time").oninput = () =>
+  (scheduleDirty = true);
+$("schedule-form").onsubmit = async (event) => {
+  event.preventDefault();
+  try {
+    await api("/schedule", "PUT", {
+      enabled: $("schedule-enabled").checked,
+      time: $("schedule-time").value,
+    });
+    scheduleDirty = false;
+    await refresh();
+    notice("网站每日计划已保存。");
+  } catch (e) {
+    fail(e);
+  }
+};
+api("/health")
+  .then((h) => {
+    $("local-hint").hidden = !h.local;
+  })
+  .catch(() => {});
+refresh();
+setInterval(() => {
+  if (!document.hidden && state) refresh();
+}, 5000);

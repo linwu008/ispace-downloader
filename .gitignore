@@ -24,3 +24,8 @@ dist/
 htmlcov/
 playwright-report/
 test-results/
+
+node_modules/
+.wrangler/
+.dev.vars*
+*.enc

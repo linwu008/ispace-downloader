@@ -1,0 +1,14 @@
+{
+  "name": "bnbu-coursenest",
+  "private": true,
+  "version": "0.4.0-dev.1",
+  "type": "module",
+  "scripts": {
+    "dev": "node dev.mjs",
+    "test": "node --test test/*.test.mjs",
+    "check": "node --check src/worker.js"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

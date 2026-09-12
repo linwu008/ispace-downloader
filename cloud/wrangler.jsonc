@@ -1,0 +1,20 @@
+{
+  "name": "bnbu-coursenest",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-09-12",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "coursenest",
+      "database_id": "REPLACE_AFTER_D1_CREATE",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "vars": { "PUBLIC_ORIGIN": "https://REPLACE_WITH_YOUR_WORKER_HOST" },
+  "triggers": { "crons": ["*/5 * * * *"] },
+}

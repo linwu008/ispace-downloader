@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BNBU CourseNest · 课巢</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script defer src="/app.js"></script>
+  </head>
+  <body>
+    <section id="welcome" class="welcome">
+      <div class="welcome-copy">
+        <a class="brand" href="/"
+          >◈ <span>BNBU <b>CourseNest</b></span></a
+        ><span class="edition">V0.4 · EARLY ACCESS</span>
+        <h1>每一份资料，<br />都有自己的位置。</h1>
+        <p>
+          在网站上选择课程，在电脑上自动归档。<br />从第一周到期末，把精力留给学习。
+        </p>
+        <div class="feature-chips">
+          <span>按 Week 整理</span><span>本地自动同步</span
+          ><span>账号独立管理</span>
+        </div>
+        <div class="sample-folder">
+          <span>▧ 你的学习空间</span>
+          <div>01 Week 1 — Introduction <i>已归档</i></div>
+          <div>02 Week 2 — Practice <i>已归档</i></div>
+          <small>文件留在自己的电脑，网站帮助你管理。</small>
+        </div>
+        <p class="disclaimer">学生独立开发 · 非学校官方网站</p>
+      </div>
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <button id="login-tab" class="active">登录</button
+          ><button id="register-tab">创建账号</button>
+        </div>
+        <h2 id="auth-title">欢迎回到课巢</h2>
+        <p>使用产品账号登录，学校账号在本地助手中连接。</p>
+        <form id="auth-form">
+          <label
+            >邮箱<input
+              id="email"
+              type="email"
+              autocomplete="username"
+              required
+              maxlength="254" /></label
+          ><label
+            >密码<input
+              id="password"
+              type="password"
+              autocomplete="current-password"
+              minlength="12"
+              maxlength="128"
+              required
+              placeholder="至少 12 个字符" /></label
+          ><label id="invite-field" hidden
+            >体验邀请码<input
+              id="invite"
+              autocomplete="off"
+              placeholder="首版通过邀请码注册" /></label
+          ><button class="primary full" id="auth-submit">登录工作空间</button>
+        </form>
+        <p id="auth-note" role="status"></p>
+        <p id="local-hint" class="hint" hidden>
+          本机验收环境 · 邀请码 <strong>NEST-LOCAL-04</strong
+          ><br />此账号仅用于本机首版体验，不是学校账号。
+        </p>
+      </div>
+    </section>
+    <div id="workspace" hidden>
+      <aside id="sidebar">
+        <a class="brand" href="#/overview"
+          >◈ <span>BNBU <b>CourseNest</b></span></a
+        ><button id="mobile-menu" class="secondary">菜单</button>
+        <div class="nav-caption">我的学习空间</div>
+        <nav>
+          <a href="#/overview">◉　总览</a><a href="#/courses">▦　我的课程</a
+          ><a href="#/devices">▣　我的设备</a><a href="#/history">↻　任务记录</a
+          ><a href="#/settings">⚙　设置</a>
+        </nav>
+        <div class="sidebar-footer">
+          <strong id="account-label"></strong
+          ><button id="logout" class="text-button">退出登录</button
+          ><small>v0.4 试用版 · 非学校官方网站</small>
+        </div>
+      </aside>
+      <main>
+        <header>
+          <span id="breadcrumb">工作空间 / 总览</span
+          ><span id="connection" class="pill">等待设备</span>
+        </header>
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow">YOUR COURSES, TOGETHER.</div>
+            <h1 id="page-title">总览</h1>
+          </div>
+          <button id="sync-all" class="primary">立即同步</button>
+        </div>
+        <div id="notice" role="status" class="notice" hidden></div>
+        <section data-page="overview">
+          <div class="metrics">
+            <article>
+              <span>我的课程</span><strong id="metric-courses">0</strong
+              ><small>每门课，独立整理</small>
+            </article>
+            <article>
+              <span>本地已保存</span><strong id="metric-files">0</strong
+              ><small>来自同步助手最近上报</small>
+            </article>
+            <article>
+              <span>等待 / 进行中</span><strong id="metric-jobs">0</strong
+              ><small>离线任务恢复后执行</small>
+            </article>
+            <article>
+              <span>网站每日计划</span><strong id="metric-time">未开启</strong
+              ><small>北京时间 · 每日补查一次</small>
+            </article>
+          </div>
+          <div class="overview-grid">
+            <article class="panel next-step">
+              <span class="eyebrow">从一台电脑开始</span>
+              <h2 id="next-title">连接你的学习电脑</h2>
+              <p id="next-copy">
+                配对同步助手后，课程与本地保存状态会出现在这里。
+              </p>
+              <a class="primary" href="#/devices">管理我的设备 →</a>
+            </article>
+            <article class="panel">
+              <h2>这周的资料，井井有条</h2>
+              <p>
+                勾选需要的文件，助手会按课程与 Week
+                自动保存。相同内容不重复下载，更新版本继续保留。
+              </p>
+              <a class="text-button" href="#/courses">查看我的课程 →</a>
+            </article>
+          </div>
+        </section>
+        <section data-page="courses" hidden>
+          <div class="panel">
+            <div class="section-head">
+              <div>
+                <h2>我的课程</h2>
+                <p>点击课程卡片，按 Week 选择要同步的文件。</p>
+              </div>
+              <div class="buttons">
+                <button id="refresh-courses" class="secondary">
+                  刷新学校列表</button
+                ><button id="add-courses" class="primary">添加课程</button>
+              </div>
+            </div>
+            <div id="course-grid" class="course-grid"></div>
+          </div>
+        </section>
+        <section data-page="devices" hidden>
+          <article class="panel device-panel">
+            <div class="section-head">
+              <div>
+                <h2>我的 Windows 电脑</h2>
+                <p>
+                  首版每个账号绑定一台电脑。学校密码保存在该电脑的凭据管理器中。
+                </p>
+              </div>
+            </div>
+            <div id="device-detail"></div>
+            <div class="steps">
+              <div>
+                <b>01</b><strong>启动同步助手</strong>
+                <p>使用提供的 Windows 试用包；本机验收可打开已有助手。</p>
+                <a
+                  href="http://127.0.0.1:8765/#/settings"
+                  target="_blank"
+                  rel="noopener"
+                  >在这台电脑打开助手 ↗</a
+                >
+              </div>
+              <div>
+                <b>02</b><strong>生成配对码</strong>
+                <p>把网站地址和配对码填入助手的“连接 CourseNest”设置。</p>
+                <button id="new-pair" class="secondary">生成配对码</button>
+                <div id="pair-code" role="status"></div>
+              </div>
+              <div>
+                <b>03</b><strong>连接学校与授权目录</strong>
+                <p>
+                  在本地助手登录学校账号、添加课程和绑定目录，之后可以从网站管理同步。
+                </p>
+              </div>
+            </div>
+          </article>
+        </section>
+        <section data-page="history" hidden>
+          <article class="panel">
+            <div class="section-head">
+              <div>
+                <h2>网站任务记录</h2>
+                <p>等待中不代表已完成；文件下载详情保留在本地助手。</p>
+              </div>
+              <span class="muted">最近 100 条</span>
+            </div>
+            <div id="job-list"></div>
+          </article>
+        </section>
+        <section data-page="settings" hidden>
+          <article class="panel settings-panel">
+            <h2>每日自动同步</h2>
+            <p>电脑离线时保留任务，恢复后补查。同步助手需要保持运行。</p>
+            <form id="schedule-form">
+              <label class="check"
+                ><input
+                  id="schedule-enabled"
+                  type="checkbox"
+                />启用网站每日计划</label
+              ><label
+                >北京时间<input
+                  id="schedule-time"
+                  type="time"
+                  value="20:00"
+                  required
+              /></label>
+              <p id="local-schedule-note" class="hint"></p>
+              <button class="primary">保存计划</button>
+            </form>
+          </article>
+          <article class="panel settings-panel">
+            <h2>账号与文件</h2>
+            <p>
+              网站保存课程清单、文件选择和任务状态。文件内容与学校密码保留在配对电脑，解除配对会撤销设备授权并清除网站上的设备清单。
+            </p>
+            <p class="hint">
+              首版通过邀请码体验，尚未接入邮箱验证与密码找回。请保存好产品账号密码。
+            </p>
+          </article>
+        </section>
+        <footer>
+          BNBU CourseNest · 为学习腾出一点空间<span id="snapshot-at"></span>
+        </footer>
+      </main>
+    </div>
+    <dialog id="course-dialog">
+      <div class="dialog-head">
+        <div>
+          <span class="eyebrow">COURSE FILES</span>
+          <h2 id="course-title"></h2>
+        </div>
+        <button data-close="course-dialog" class="secondary">关闭</button>
+      </div>
+      <div class="dialog-body">
+        <div class="course-tools">
+          <input id="file-search" placeholder="搜索文件名或 Week" /><button
+            id="read-catalog"
+            class="secondary"
+          >
+            更新资料清单
+          </button>
+        </div>
+        <p id="course-note" class="hint"></p>
+        <label
+          >同步范围<select id="course-mode">
+            <option value="selected">仅同步所选文件</option>
+            <option value="all">整门课自动下载</option>
+          </select></label
+        >
+        <div id="group-list"></div>
+        <button id="remove-course" class="danger text-button">
+          移出我的课程（保留本地文件）
+        </button>
+      </div>
+      <div class="dialog-footer">
+        <span id="selection-count"></span>
+        <div class="buttons">
+          <button id="save-choice" class="secondary">保存选择</button
+          ><button id="download-choice" class="primary">保存并同步</button>
+        </div>
+      </div>
+    </dialog>
+    <dialog id="add-dialog">
+      <div class="dialog-head">
+        <h2>添加课程</h2>
+        <button data-close="add-dialog" class="secondary">关闭</button>
+      </div>
+      <div class="dialog-body">
+        <input id="course-search" placeholder="搜索学校课程" />
+        <div id="available-courses"></div>
+      </div>
+      <div class="dialog-footer">
+        <span>新课程默认只同步所选文件</span
+        ><button id="confirm-add" class="primary">添加所选课程</button>
+      </div>
+    </dialog>
+    <dialog id="location-dialog">
+      <div class="dialog-head">
+        <h2>本地文件位置</h2>
+        <button data-close="location-dialog" class="secondary">关闭</button>
+      </div>
+      <div class="dialog-body" id="location-body"></div>
+    </dialog>
+  </body>
+</html>
