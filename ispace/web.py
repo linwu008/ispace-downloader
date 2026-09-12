@@ -307,5 +307,7 @@ def create_app(store=None, service=None):
             subprocess.Popen(['explorer.exe', '/select,', result['path']])
         return {'ok': True}
 
+    from .companion import install_routes
+    install_routes(app, store, service)
     app.mount("/static", StaticFiles(directory=static), name="static")
     return app

@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>iSpace · 学习资料</title><link rel="stylesheet" href="/static/style.css"><script defer src="/static/app.js"></script><script defer src="/static/library.js"></script><script defer src="/static/workspace.js"></script><script defer src="/static/history.js"></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>iSpace · 学习资料</title><link rel="stylesheet" href="/static/style.css"><script defer src="/static/app.js"></script><script defer src="/static/library.js"></script><script defer src="/static/workspace.js"></script><script defer src="/static/history.js"></script><script defer src="/static/companion.js"></script></head>
 <body>
 <aside class="sidebar" id="sidebar"><button id="mobile-menu" class="secondary mobile-menu" aria-expanded="false" aria-controls="sidebar">菜单</button>
   <a class="brand" href="/"><span class="brand-icon">i</span><span>iSpace<span class="brand-sub">学习资料助手</span></span></a>
@@ -10,7 +10,7 @@
   <a class="nav" href="#/library"><span>⌕</span> 资料库</a>
   <a class="nav" href="#/history"><span>↻</span> 任务记录</a>
   <a class="nav" href="#/settings"><span>⚙</span> 设置</a>
-  <div class="sidebar-bottom"><span class="local-dot"></span> 本机工作空间<p>资料留在你的电脑上<br>v0.3 · BNBU iSpace</p></div>
+  <div class="sidebar-bottom"><span class="local-dot"></span> 本机工作空间<p>资料留在你的电脑上<br>v0.4 试用版 · BNBU iSpace</p></div>
 </aside>
 <main>
   <header><div class="breadcrumb">工作空间 <span>/</span> 总览</div><span class="chip">本地运行</span></header>
@@ -40,6 +40,7 @@
     <div class="section-head"><h2>整理记录</h2></div><div id="organization-history"></div>
   </section>
   <section id="settings" class="settings-grid page-view" hidden>
+    <article class="panel settings-card"><h2>连接 BNBU CourseNest</h2><p>在独立网站生成配对码，让网站管理这台电脑的课程同步。目录授权和学校登录仍在本机进行。</p><p id="companion-status" role="status"></p><strong id="companion-connection"></strong><form id="companion-pair"><label>网站首页地址<input id="companion-server" type="url" value="http://127.0.0.1:8787" required></label><label>配对码<input id="companion-code" maxlength="30" autocomplete="off" placeholder="XXXX-XXXX-XXXX" required></label><label>这台电脑的名称<input id="companion-name" value="我的 Windows 电脑" maxlength="80" required></label><button id="companion-connect" class="primary">连接网站</button></form><div id="companion-actions" class="button-row" hidden><button id="companion-pause" class="secondary">暂停网站任务</button><button id="companion-disconnect" class="secondary">断开网站</button></div><p class="subtle">关闭网页后助手仍在后台运行。首版网站只能操作已在本机绑定的课程目录。</p></article>
     <article class="panel settings-card"><h2>连接学校账号 <span id="auth-badge" class="badge neutral">未登录</span></h2><p>连接 ispace.bnbu.edu.cn，凭据加密保存在当前 Windows 账户下。</p>
       <form id="login-form"><label for="username">学校账号</label><input id="username" autocomplete="username" required placeholder="输入你的 iSpace 账号"><label for="password">密码</label><input id="password" type="password" autocomplete="current-password" required placeholder="输入密码"><div class="button-row"><button type="submit" class="primary">登录并记住</button><button type="button" id="manual-login" class="secondary">手动登录窗口</button></div></form>
       <p class="hint">有验证码时使用手动窗口。登录状态过期后会尝试重新连接。</p><button id="logout" class="text-button">清除本机凭据与登录状态</button>
@@ -49,7 +50,7 @@
       <div class="note-card"><strong>只收新内容，保留旧版本。</strong><p>首次比对时可能临时下载核验。相同内容不会留下重复副本；老师更新同名文件时会保留新旧版本。</p></div>
     </article>
   </section>
-  <footer>资料保存在本机<span>iSpace Downloader / v0.3</span></footer>
+  <footer>资料保存在本机<span>iSpace Downloader / v0.4 试用版</span></footer>
 </main>
 <dialog id="organization-dialog" aria-labelledby="preview-title"><div class="section-head"><h2 id="preview-title">确认资料整理方案</h2><button id="close-preview" class="secondary">关闭</button></div><p id="preview-description" class="dialog-note"></p><div class="preview-tools"><button id="select-preview" class="text-button">全选可执行项</button><button id="clear-preview" class="text-button">取消选择</button></div><div class="table-scroll preview-table"><table><thead><tr><th>选择</th><th>资料 / 操作</th><th>原位置</th><th>目标位置</th><th>说明</th></tr></thead><tbody id="preview-rows"></tbody></table></div><p id="preview-empty" class="empty-row" hidden>当前没有需要整理的已关联资料。</p><div class="dialog-footer"><span>执行前会再次核对文件和设置，已有文件不会被覆盖。</span><button id="execute-organization" class="primary">确认并执行所选项目</button></div></dialog>
 

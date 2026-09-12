@@ -1,0 +1,7 @@
+'use strict';
+let companionPaired=false,companionPaused=false;
+async function refreshCompanion(){try{const s=await api('/companion');companionPaired=s.paired;companionPaused=s.paused;$('companion-status').textContent=s.message||'尚未配对网站。学校账号和资料仍保存在本机。';$('companion-pair').hidden=!!s.paired;$('companion-actions').hidden=!s.paired&&!s.broken;$('companion-connection').textContent=s.paired?`${s.name} · ${s.server}`:'';$('companion-pause').textContent=s.paused?'恢复网站任务':'暂停网站任务';}catch{}}
+$('companion-pair').onsubmit=async event=>{event.preventDefault();$('companion-connect').disabled=true;try{await api('/companion/pair','POST',{server:$('companion-server').value.trim(),code:$('companion-code').value.trim(),name:$('companion-name').value.trim()});$('companion-code').value='';await refreshCompanion();}catch(e){$('companion-status').textContent=e.message;}finally{$('companion-connect').disabled=false;}};
+$('companion-pause').onclick=async()=>{try{await api('/companion/pause','PUT',{paused:!companionPaused});await refreshCompanion();}catch(e){$('companion-status').textContent=e.message;}};
+$('companion-disconnect').onclick=async()=>{if(!confirm('停止这台电脑接收网站任务？已下载文件与学校账号保留。'))return;try{await api('/companion/disconnect','POST');await refreshCompanion();}catch(e){$('companion-status').textContent=e.message;}};
+refreshCompanion();setInterval(()=>{if(!document.hidden)refreshCompanion();},5000);
