@@ -138,6 +138,6 @@ window.addEventListener('ispace-state',event=>{
 window.addEventListener('ispace-state',event=>{
   const container=$('organization-history');container.replaceChildren();
   const plans=event.detail.organization_history.filter(p=>p.status!=='preview');
-  for(const plan of plans){const row=el('article',undefined,'organization-entry');row.append(el('strong','资料整理 · '+formatTime(plan.created)),el('p',plan.result?.message||(event.detail.busy?'正在整理…':'整理已中断，可重新打开方案继续')));const button=el('button','查看整理方案','text-button');button.disabled=event.detail.busy;button.onclick=()=>api('/organization/'+plan.id).then(showOrganization).catch(fail);row.append(button);container.append(row);}
+  for(const plan of plans){const row=el('article',undefined,'organization-entry');row.append(el('strong','资料整理 · '+formatTime(plan.created)),el('p',plan.result?.message||(event.detail.busy?'正在整理…':'整理已中断，可重新打开方案继续')));row.append(el('div',[...(plan.course_names||[]),...(plan.group_titles||[])].join(' · '),'organization-context'));const button=el('button','查看整理方案','text-button');button.disabled=event.detail.busy;button.onclick=()=>api('/organization/'+plan.id).then(showOrganization).catch(fail);row.append(button);container.append(row);}
   if(!plans.length)container.append(el('p','尚无整理记录。','empty'));
 });

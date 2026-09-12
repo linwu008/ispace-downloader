@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from filelock import Timeout
 from pydantic import BaseModel, Field
 
-from . import __version__, catalog, organize, courses, previews
+from . import __version__, catalog, organize, courses, previews, history
 from .scheduler import configure, next_run
 from .service import Service, BusyError
 from .state import Store, data_dir
@@ -291,6 +291,21 @@ def create_app(store=None, service=None):
                 content = stream.read(previews.TEXT_BYTES).decode('utf-8-sig', errors='replace')
             return PlainTextResponse(content)
         return FileResponse(ready['path'], media_type=ready['mime'], filename=item['name'], content_disposition_type='inline')
+
+    @app.get('/api/events/{event_id}/location')
+    def event_location(event_id: int):
+        return history.location(store, event_id)
+
+    @app.post('/api/events/{event_id}/locate')
+    def locate_event(event_id: int):
+        with service.lock():
+            result = history.location(store, event_id)
+            if not result['exists']:
+                raise ValueError(result['note'])
+            if os.name != 'nt':
+                raise ValueError('定位文件仅支持 Windows')
+            subprocess.Popen(['explorer.exe', '/select,', result['path']])
+        return {'ok': True}
 
     app.mount("/static", StaticFiles(directory=static), name="static")
     return app

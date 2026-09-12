@@ -59,6 +59,8 @@ class Store:
         migrate(self)
         from .courses import migrate as migrate_courses
         migrate_courses(self)
+        from .history import ensure_schema
+        ensure_schema(self)
 
     def connect(self):
         db = sqlite3.connect(self.path, timeout=30)
@@ -121,17 +123,20 @@ class Store:
             db.execute("UPDATE runs SET status='interrupted',finished=?,message='上次任务异常中断，请重试' WHERE status='running'", (now(),))
             return db.execute("INSERT INTO runs(started,status) VALUES (?,'running')", (now(),)).lastrowid
 
-    def event(self, run_id, course_id, name, status, message):
+    def event(self, run_id, course_id, name, status, message, material_id=None):
         with self.connect() as db:
-            db.execute("INSERT INTO events(run_id,course_id,name,status,message,created) VALUES (?,?,?,?,?,?)", (run_id, course_id, name, status, message, now()))
+            event_id = db.execute("INSERT INTO events(run_id,course_id,name,status,message,created) VALUES (?,?,?,?,?,?)", (run_id, course_id, name, status, message, now())).lastrowid
+            from .history import record_context
+            record_context(db, event_id, course_id, material_id)
 
     def finish(self, run_id, status, downloaded, skipped, failed, message=""):
         with self.connect() as db:
             db.execute("UPDATE runs SET finished=?,status=?,downloaded=?,skipped=?,failed=?,message=? WHERE id=?", (now(), status, downloaded, skipped, failed, message, run_id))
 
     def history(self):
+        from .history import decorate
         with self.connect() as db:
             return {
                 "runs": [dict(r) for r in db.execute("SELECT * FROM runs ORDER BY id DESC LIMIT 30")],
-                "events": [dict(r) for r in db.execute("SELECT * FROM events ORDER BY id DESC LIMIT 200")],
+                "events": decorate(self, [dict(r) for r in db.execute("SELECT * FROM events ORDER BY id DESC LIMIT 200")]),
             }

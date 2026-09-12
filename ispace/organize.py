@@ -30,7 +30,15 @@ def load(store, identifier):
 def history(store):
     with store.connect() as db:
         rows = db.execute("SELECT id,created,status,payload FROM organization_plans ORDER BY created DESC LIMIT 15").fetchall()
-    return [{"id": row["id"], "created": row["created"], "status": row["status"], "result": json.loads(row["payload"]).get("result")} for row in rows]
+    course_names = {str(c['id']): c['name'] for c in store.courses()}
+    group_names = {g['id']: g['title'] for g in catalog.groups(store)}
+    result = []
+    for row in rows:
+        plan = json.loads(row['payload'])
+        result.append({'id': row['id'], 'created': row['created'], 'status': row['status'], 'result': plan.get('result'),
+                       'course_names': [course_names.get(key, '未知课程') for key in plan.get('roots', {})],
+                       'group_titles': list(dict.fromkeys(group_names[key] for key in plan.get('groups', {}) if key in group_names))})
+    return result
 
 
 def preview(store, course_id=None, group_id=None, folder=None, mode=None, item_id=None, target_group_id=None):

@@ -85,14 +85,14 @@ class SyncEngine:
                         try:
                             status, message = self.one(course, resource, index)
                             counts[status] += 1
-                            self.store.event(run_id, course["id"], resource.name, status, message)
+                            self.store.event(run_id, course["id"], resource.name, status, message, material_id=item["id"])
                             break
                         except LoginRequired:
                             raise
                         except Exception as exc:
                             if attempt == 3:
                                 counts["failed"] += 1
-                                self.store.event(run_id, course["id"], resource.name, "failed", safe_error(exc))
+                                self.store.event(run_id, course["id"], resource.name, "failed", safe_error(exc), material_id=item["id"])
                             else:
                                 self.sleep(2 ** attempt)
                     self.store.set("active_material", None)
@@ -100,7 +100,7 @@ class SyncEngine:
                     missing = catalog.material(self.store, missing_id)
                     message = "学校清单未找到已选资料，可能已删除或暂时不可访问；本地文件保留"
                     counts["failed"] += 1
-                    self.store.event(run_id, course["id"], missing["name"], "failed", message)
+                    self.store.event(run_id, course["id"], missing["name"], "failed", message, material_id=missing_id)
                     with self.store.connect() as db:
                         db.execute("UPDATE materials SET status='failed',error=? WHERE id=?", (message, missing_id))
                 with self.store.connect() as db:

@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>iSpace · 学习资料</title><link rel="stylesheet" href="/static/style.css"><script defer src="/static/app.js"></script><script defer src="/static/library.js"></script><script defer src="/static/workspace.js"></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>iSpace · 学习资料</title><link rel="stylesheet" href="/static/style.css"><script defer src="/static/app.js"></script><script defer src="/static/library.js"></script><script defer src="/static/workspace.js"></script><script defer src="/static/history.js"></script></head>
 <body>
 <aside class="sidebar" id="sidebar"><button id="mobile-menu" class="secondary mobile-menu" aria-expanded="false" aria-controls="sidebar">菜单</button>
   <a class="brand" href="/"><span class="brand-icon">i</span><span>iSpace<span class="brand-sub">学习资料助手</span></span></a>
@@ -36,7 +36,7 @@
   </section>
   <section id="history" class="panel page-view" hidden>
     <div class="section-head"><div><h2>任务记录</h2><p>新增、已有和未完成的项目都会在这里显示。</p></div><span class="subtle">最近 200 条</span></div>
-    <div class="table-scroll"><table><thead><tr><th>文件 / 课程</th><th>状态</th><th>详情</th><th>时间</th></tr></thead><tbody id="events"><tr><td colspan="4" class="empty-row">还没有任务记录</td></tr></tbody></table></div>
+    <div class="table-scroll task-table"><table><thead><tr><th>文件与详情</th><th>所属课程</th><th>分组 / 目录</th><th>状态</th><th>时间</th><th>操作</th></tr></thead><tbody id="events"><tr><td colspan="6" class="empty-row">还没有任务记录</td></tr></tbody></table></div>
     <div class="section-head"><h2>整理记录</h2></div><div id="organization-history"></div>
   </section>
   <section id="settings" class="settings-grid page-view" hidden>
@@ -60,4 +60,5 @@
 <div class="selection-mode"><label for="course-mode">下载范围</label><select id="course-mode"><option value="selected">仅同步所选文件</option><option value="all">整门课自动下载</option></select><span id="selection-note" role="status"></span></div><div id="course-group-list"></div></div>
 <div class="dialog-footer"><span id="selection-count">尚未选择文件</span><div class="button-row"><button id="save-selection" class="secondary">保存选择</button><button id="download-selected" class="primary">下载已选</button></div></div></dialog>
 <dialog id="file-preview-dialog" aria-labelledby="file-preview-title"><div class="section-head"><h2 id="file-preview-title">文件预览</h2><button class="secondary" data-close="file-preview-dialog">关闭</button></div><p id="file-preview-note" class="dialog-note" role="status"></p><div id="file-preview-body" class="file-preview-body"></div><div class="dialog-footer"><span>预览不会改变文件选择。</span><div class="button-row"><button id="preview-locate" class="secondary">定位本地文件</button><button id="preview-download" class="primary">下载此文件</button></div></div></dialog>
+<dialog id="task-location-dialog" aria-labelledby="task-location-title"><div class="section-head"><h2 id="task-location-title">文件保存位置</h2><button class="secondary" data-close="task-location-dialog">关闭</button></div><div class="dialog-body"><p id="location-note" class="notice" role="status"></p><dl id="location-fields"></dl></div><div class="dialog-footer"><span>位置按任务关联的文件核对。</span><button id="locate-task-file" class="primary">在资源管理器中定位</button></div></dialog>
 </body></html>

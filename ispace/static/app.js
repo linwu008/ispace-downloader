@@ -22,11 +22,7 @@ async function action(path, method='POST', body) {
   } catch(error) { transientUntil = Date.now() + 6000; notice(error.message,true); }
 }
 function renderCourses(courses, groups=[]) { renderCourseCards(courses,groups); }
-function renderEvents(events) {
-  const body=$('events');body.replaceChildren();
-  if(!events.length){const row=el('tr'),cell=el('td','还没有同步记录','empty-row');cell.colSpan=4;row.append(cell);body.append(row);return;}
-  for(const event of events){const row=el('tr'),status=el('td');status.append(el('span',labels[event.status]||event.status,'badge '+(event.status==='failed'?'failed':event.status==='downloaded'?'success':'neutral')));row.append(el('td',event.name),status,el('td',event.message),el('td',formatTime(event.created)));body.append(row);}
-}
+function renderEvents(events) { renderTaskEvents(events); }
 async function refresh() {
   try {
     const state=await api('/state');csrf=state.csrf;busy=state.busy;
