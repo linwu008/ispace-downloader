@@ -116,7 +116,7 @@ with sync_playwright() as engine:
     assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     page.screenshot(path=str(project/'.runtime/v03-history-mobile.png'),full_page=True)
     page.locator('#events').get_by_role('button',name='查看位置').first.click()
-    expect(page.locator('#location-fields')).to_contain_text(str(root))
+    expect(page.locator('#location-fields')).to_contain_text(str(root.resolve()))
     expect(page.locator('#locate-task-file')).to_be_enabled()
     assert page.locator('#task-location-dialog').evaluate('(d)=>d.scrollWidth<=d.clientWidth')
     page.screenshot(path=str(project/'.runtime/v03-history-location-mobile.png'))
@@ -130,7 +130,7 @@ with sync_playwright() as engine:
     page.set_viewport_size({'width':1440,'height':1000})
     page.screenshot(path=str(project/'.runtime/v03-history.png'),full_page=True)
     page.locator('#events').get_by_role('button',name='查看位置').first.click()
-    expect(page.locator('#location-fields')).to_contain_text(str(root))
+    expect(page.locator('#location-fields')).to_contain_text(str(root.resolve()))
     page.screenshot(path=str(project/'.runtime/v03-history-location.png'))
     page.locator('[data-close="task-location-dialog"]').click()
     assert not errors, errors
