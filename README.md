@@ -4,15 +4,15 @@
 
 本次不开通 R2：学期存档、分享、知识总结及未配置的邮件恢复暂未开放，页面明确提示。保留现有数据库和同步流程。后续启用步骤见 docs/V0.5-DEPLOYMENT.md。
 
-> v0.5 本地实现与验收中；正式线上版本仍以已发布版本为准。部署配置见 [v0.5 部署说明](docs/V0.5-DEPLOYMENT.md)。
+> v0.5 已按上方范围上线；存档与邮件功能保留待启用。部署配置见 [v0.5 部署说明](docs/V0.5-DEPLOYMENT.md)。
 
-# BNBU CourseNest · v0.4
+# BNBU CourseNest · v0.5
 
-独立产品网站 + Windows 本地同步助手。正式网站：https://bnbucoursenest.cn 。当前版本 `0.4.0`，发布标签 `v0.4`；保留 v0.1、v0.2、v0.3。
+独立产品网站 + Windows 本地同步助手。正式网站：https://bnbucoursenest.cn 。当前版本 `0.5.0`，发布标签 `v0.5`；保留 v0.1、v0.2、v0.3。
 
 网站负责产品账号、设备配对、课程选择和任务；学校密码与文件留在各自电脑。注册需要邀请码。下载 Windows 助手后解压整个目录，运行 `CourseNestHelper.exe`，在助手中登录学校、绑定课程目录，再使用正式网站生成的配对码连接。网站地址与生成配对码的网站必须一致。
 
-- [Windows 助手下载与发布记录](https://github.com/linwu008/ispace-downloader/releases/tag/v0.4)（当前仓库为私有，需仓库访问权限）
+- [Windows 助手下载与发布记录](https://github.com/linwu008/coursenest-releases/releases/tag/v0.5)（公开下载，无需源码仓库权限）
 - [Windows 独立助手说明](docs/WINDOWS-ASSISTANT.md)
 - [Cloudflare 部署说明](docs/CLOUDFLARE-V0.4.md)
 - [v0.4 验证记录](docs/V0.4-TRIAL.md)
