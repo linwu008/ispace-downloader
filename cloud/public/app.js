@@ -56,6 +56,7 @@ const time = (value) =>
 async function api(path, method = "GET", body) {
   const res = await fetch("/api" + path, {
     method,
+    ...(path === "/me" ? { signal: AbortSignal.timeout(15000) } : {}),
     headers: {
       ...(body ? { "Content-Type": "application/json" } : {}),
       ...(state?.csrf ? { "X-CSRF-Token": state.csrf } : {}),
@@ -90,6 +91,7 @@ function fail(e) {
   }
 }
 function signedOut() {
+  $("session-loading").hidden = true;
   lastSnapshot = -1;
   state = null;
   current = null;
@@ -299,9 +301,14 @@ function renderJobs() {
   if (!jobs.length) box.append(el("p", "还没有网站任务。", "empty"));
 }
 async function refresh() {
+  if (!$("session-loading").hidden) {
+    $("session-status").textContent = "正在打开学习空间…";
+    $("session-retry").hidden = true;
+  }
   try {
     const value = await api("/me");
     state = value;
+    $("session-loading").hidden = true;
     $("welcome").hidden = true;
     $("workspace").hidden = false;
     $("account-label").textContent = value.user.email;
@@ -377,8 +384,13 @@ async function refresh() {
     }
   } catch (e) {
     if (state) fail(e);
+    else if (!$("session-loading").hidden) {
+      $("session-status").textContent = "暂时无法连接网站，请重试。";
+      $("session-retry").hidden = false;
+    }
   }
 }
+$("session-retry").onclick = () => refresh();
 $("new-pair").onclick = async () => {
   try {
     const p = await api("/pairings", "POST");

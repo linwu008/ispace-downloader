@@ -50,6 +50,26 @@ try:
         mobile=browser.new_context(user_agent='iPhone',viewport={'width':390,'height':844});mp=mobile.new_page();mp.goto(origin+'/download.html');expect(mp.locator('#local-link')).not_to_have_attribute('href','http://127.0.0.1:8765/')
         page.route('**/api/features',lambda route:route.fulfill(json={'archive_enabled':False,'mail_enabled':False,'qa_enabled':False}))
         page.goto(origin+'/archives.html');expect(page.locator('#create')).to_be_hidden();expect(page.locator('#message')).to_contain_text('暂未启用')
+        # Hold session restoration to expose any first-frame login flash.
+        for source,label in [('archives.html','学习空间'),('download.html','CourseNest 官网')]:
+            page.goto(origin+'/'+source)
+            pending=[]
+            page.route('**/api/me',lambda route:pending.append(route))
+            page.get_by_role('link',name=label,exact=True).click()
+            expect(page.locator('#session-loading')).to_be_visible()
+            expect(page.locator('#welcome')).to_be_hidden()
+            expect(page.locator('#workspace')).to_be_hidden()
+            page.wait_for_timeout(300)
+            assert pending
+            pending.pop().continue_()
+            expect(page.locator('#workspace')).to_be_visible()
+            expect(page.locator('#welcome')).to_be_hidden()
+            expect(page.locator('#session-loading')).to_be_hidden()
+            page.unroute('**/api/me')
+        page.route('**/api/me',lambda route:route.abort())
+        page.goto(origin+'/');expect(page.locator('#session-retry')).to_be_visible();expect(page.locator('#welcome')).to_be_hidden()
+        page.unroute('**/api/me');page.locator('#session-retry').click();expect(page.locator('#workspace')).to_be_visible()
+        guest=browser.new_context();gp=guest.new_page();gp.goto(origin+'/');expect(gp.locator('#welcome')).to_be_visible();expect(gp.locator('#session-loading')).to_be_hidden()
         assert not errors,errors
         browser.close()
     print('PASS v0.5 browser: archive creation/upload/display/share, account page, public download status, mobile setup guidance.')
