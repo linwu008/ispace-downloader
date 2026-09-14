@@ -18,9 +18,11 @@ node --test cloud/test/*.test.mjs
 
 用户已将 `bnbucoursenest.cn` 接入 Cloudflare，并创建 D1 数据库 `coursenest`，ID 为 `743d0018-d56f-4e10-8d87-666613847f84`。仓库配置已填写此 ID 与正式 `PUBLIC_ORIGIN=https://bnbucoursenest.cn`；数据库 ID 不是访问密钥。
 
+D1 控制台查询已确认六张业务表存在：`users`、`sessions`、`pairings`、`devices`、`jobs`、`throttles`。Workers 项目已创建；首次使用 `main` 构建因缺少 `cloud` 根目录失败。用户随后将生产分支改为 `codex/v0.4-coursenest`，并重新选择构建令牌。下一次推送用于触发该分支的新构建，构建结果仍需在 Cloudflare 核对。
+
 尚需完成：
 
-1. 在 D1 控制台执行 `cloud/migrations/0001_initial.sql`，或者在已授权的 Wrangler 中运行下方迁移命令，创建表。创建空数据库不等于初始化完成。
+1. 六张业务表已创建；如需进一步核对完整结构，可运行下方幂等迁移命令，补齐索引并记录迁移版本。不要重新创建数据库。
 2. Workers Builds 使用项目名 `bnbu-coursenest`、根目录 `cloud` 和分支 `codex/v0.4-coursenest`。构建命令留空，部署命令 `npx wrangler deploy`。若创建向导不提供分支选择，应在部署设置中核对生产分支；`main` 仍是 v0.3，不可直接用来部署本网站。
 3. 部署 Worker 后，在 Settings 的运行时 Variables and Secrets 中新增 Secret `INVITE_CODE`。创建向导的构建变量不能代替运行时 Secret。邀请码由用户设置，不提交到 Git。
 4. 在 Worker Settings → Domains & Routes 添加自定义域名 `bnbucoursenest.cn`。当前严格校验正式域名，通过临时 `workers.dev` 地址访问会返回“网站地址未获授权”，应使用绑定后的正式域名验收。
