@@ -14,13 +14,26 @@ node --test cloud/test/*.test.mjs
 .venv\Scripts\python.exe scripts/check_ui_v4.py
 ```
 
-## 待验收后配置
+## 当前部署进度（2026-09-14）
+
+用户已将 `bnbucoursenest.cn` 接入 Cloudflare，并创建 D1 数据库 `coursenest`，ID 为 `743d0018-d56f-4e10-8d87-666613847f84`。仓库配置已填写此 ID 与正式 `PUBLIC_ORIGIN=https://bnbucoursenest.cn`；数据库 ID 不是访问密钥。
+
+尚需完成：
+
+1. 在 D1 控制台执行 `cloud/migrations/0001_initial.sql`，或者在已授权的 Wrangler 中运行下方迁移命令，创建表。创建空数据库不等于初始化完成。
+2. Workers Builds 使用项目名 `bnbu-coursenest`、根目录 `cloud` 和分支 `codex/v0.4-coursenest`。构建命令留空，部署命令 `npx wrangler deploy`。若创建向导不提供分支选择，应在部署设置中核对生产分支；`main` 仍是 v0.3，不可直接用来部署本网站。
+3. 部署 Worker 后，在 Settings 的运行时 Variables and Secrets 中新增 Secret `INVITE_CODE`。创建向导的构建变量不能代替运行时 Secret。邀请码由用户设置，不提交到 Git。
+4. 在 Worker Settings → Domains & Routes 添加自定义域名 `bnbucoursenest.cn`。当前严格校验正式域名，通过临时 `workers.dev` 地址访问会返回“网站地址未获授权”，应使用绑定后的正式域名验收。
+5. 完成真实 Cloudflare 注册、配对、任务和安全隔离验收。当前配置更新不代表已完成远端迁移或部署。
+
+## Wrangler 部署步骤
 
 在 `cloud` 目录，使用 Cloudflare 官方 Wrangler 登录并创建 D1：
 
 ```powershell
 npx wrangler login
-npx wrangler d1 create coursenest
+# 仅首次创建数据库时执行；当前账号已经创建，不要重复创建。
+# npx wrangler d1 create coursenest
 ```
 
 把返回的数据库 ID 填到 `wrangler.jsonc` 的 `database_id`。把 `PUBLIC_ORIGIN` 改为最终完整 HTTPS 网站地址，例如实际分配的 `https://bnbu-coursenest.<你的子域>.workers.dev`，不能照抄占位地址，也不能保留 `LOCAL_DEV=1`。

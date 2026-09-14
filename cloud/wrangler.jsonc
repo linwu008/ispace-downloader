@@ -11,10 +11,10 @@
     {
       "binding": "DB",
       "database_name": "coursenest",
-      "database_id": "REPLACE_AFTER_D1_CREATE",
+      "database_id": "743d0018-d56f-4e10-8d87-666613847f84",
       "migrations_dir": "migrations",
     },
   ],
-  "vars": { "PUBLIC_ORIGIN": "https://REPLACE_WITH_YOUR_WORKER_HOST" },
+  "vars": { "PUBLIC_ORIGIN": "https://bnbucoursenest.cn" },
   "triggers": { "crons": ["*/5 * * * *"] },
 }
