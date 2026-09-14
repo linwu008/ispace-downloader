@@ -42,7 +42,7 @@ with sync_playwright() as engine:
         response=client.request(request.method,path,headers=headers,content=request.post_data_buffer)
         route.fulfill(status=response.status_code,headers=dict(response.headers),body=response.content)
     page.route('http://127.0.0.1:18765/**',route_request)
-    page.goto('http://127.0.0.1:18765/#/courses',wait_until='networkidle')
+    page.goto('http://127.0.0.1:18765/static/index.html#/courses',wait_until='networkidle')
     expect(page.locator('.page-view:visible')).to_have_count(1)
     expect(page.locator('.course-card')).to_have_count(1)
     page.screenshot(path=str(project/'.runtime/v03-courses.png'),full_page=True)

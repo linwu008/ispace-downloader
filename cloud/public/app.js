@@ -222,6 +222,11 @@ function renderDevice() {
   const box = $("device-detail");
   box.replaceChildren();
   const d = state.device;
+  if (d && !d.snapshot?.version?.startsWith("0.5.")) {
+    const upgrade = el("p", "助手有新版可用；原有同步仍可使用。 ");
+    const link = el("a", "下载 v0.5 助手"); link.href = "/download.html";
+    upgrade.append(link); box.append(upgrade);
+  }
   $("new-pair").disabled = !!d;
   if (d) {
     const row = el("div", undefined, "device-name"),
@@ -628,3 +633,5 @@ refresh();
 setInterval(() => {
   if (!document.hidden && state) refresh();
 }, 5000);
+
+if(/Android|iPhone|iPad/i.test(navigator.userAgent)){for(const link of document.querySelectorAll('a[href^="http://127.0.0.1"]')){link.removeAttribute('href');link.textContent='请在 Windows 电脑上完成助手设置';}}

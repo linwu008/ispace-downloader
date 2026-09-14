@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>账号服务 · CourseNest</title>
+    <link rel="stylesheet" href="/features.css" />
+    <script defer src="/features.js"></script>
+  </head>
+  <body data-feature="account">
+    <main>
+      <a href="/">返回官网</a>
+      <h1>账号服务</h1>
+      <p id="message" role="status"></p>
+      <section>
+        <h2>找回网站密码</h2>
+        <form id="forgot">
+          <label>注册邮箱<input id="email" type="email" required /></label
+          ><button>发送重置邮件</button>
+        </form>
+        <form id="reset" hidden>
+          <label
+            >新密码<input
+              id="password"
+              type="password"
+              minlength="8"
+              maxlength="128"
+              required
+              autocomplete="new-password" /></label
+          ><button>更新密码</button>
+        </form>
+      </section>
+      <section>
+        <h2>验证邮箱</h2>
+        <p>登录官网后可以申请验证邮件。学校 iSpace 密码不在这里修改。</p>
+        <button id="verify">发送验证邮件</button
+        ><button id="confirm-token" hidden>确认验证邮箱</button>
+      </section>
+    </main>
+  </body>
+</html>

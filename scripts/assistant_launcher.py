@@ -35,7 +35,7 @@ def main():
     try:
         response = httpx.get(url + '/api/state', timeout=2, trust_env=False)
         if response.status_code == 200 and response.json().get('version') == __version__:
-            webbrowser.open(url + '/#/settings')
+            webbrowser.open('https://bnbucoursenest.cn' if httpx.get(url+'/api/companion',trust_env=False).json().get('paired') and httpx.get(url+'/api/state',trust_env=False).json().get('auth')=='logged_in' else url+'/')
             return
         alert('本机 8765 端口已有其他版本运行，请先关闭旧版助手，再启动 CourseNest。')
         return
@@ -62,7 +62,7 @@ def main():
     draw.line((20,29,44,29), fill='#e5ecd8', width=3)
     draw.line((20,38,38,38), fill='#e5ecd8', width=3)
     def open_ui(icon=None, item=None):
-        webbrowser.open(url + '/#/settings')
+        webbrowser.open('https://bnbucoursenest.cn' if httpx.get(url+'/api/companion',trust_env=False).json().get('paired') and httpx.get(url+'/api/state',trust_env=False).json().get('auth')=='logged_in' else url+'/')
     def autorun_enabled(item=None):
         import winreg
         try:
@@ -90,8 +90,9 @@ def main():
                 icon.stop()
         except Timeout:
             alert('仍有任务正在执行，请等待完成后退出，以保证文件完整。')
-    tray = pystray.Icon('BNBUCourseNest', picture, 'BNBU CourseNest · v0.4 正式版', pystray.Menu(
+    tray = pystray.Icon('BNBUCourseNest', picture, 'BNBU CourseNest · v0.5', pystray.Menu(
         pystray.MenuItem('打开同步助手', open_ui, default=True),
+        pystray.MenuItem('电脑设置', lambda icon,item:webbrowser.open(url+'/')),
         pystray.MenuItem('Windows 登录后启动', toggle_autorun, checked=autorun_enabled),
         pystray.MenuItem('退出同步助手', quit_app)))
     if os.environ.get('COURSENEST_NO_BROWSER') != '1':

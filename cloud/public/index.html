@@ -12,7 +12,7 @@
       <div class="welcome-copy">
         <a class="brand" href="/"
           >◈ <span>BNBU <b>CourseNest</b></span></a
-        ><span class="edition">V0.4 · EARLY ACCESS</span>
+        ><span class="edition">V0.5 · EARLY ACCESS</span>
         <h1>每一份资料，<br />都有自己的位置。</h1>
         <p>
           在网站上选择课程，在电脑上自动归档。<br />从第一周到期末，把精力留给学习。
@@ -25,7 +25,7 @@
           <span>▧ 你的学习空间</span>
           <div>01 Week 1 — Introduction <i>已归档</i></div>
           <div>02 Week 2 — Practice <i>已归档</i></div>
-          <small>文件留在自己的电脑，网站帮助你管理。</small>
+          <small>本地同步，按需开启云端学期存档。</small>
         </div>
         <p class="disclaimer">学生独立开发 · 非学校官方网站</p>
       </div>
@@ -49,10 +49,10 @@
               id="password"
               type="password"
               autocomplete="current-password"
-              minlength="12"
+              minlength="8"
               maxlength="128"
               required
-              placeholder="至少 12 个字符" /></label
+              placeholder="至少 8 个字符" /></label
           ><label id="invite-field" hidden
             >体验邀请码<input
               id="invite"
@@ -60,6 +60,7 @@
               placeholder="首版通过邀请码注册" /></label
           ><button class="primary full" id="auth-submit">登录工作空间</button>
         </form>
+        <p><a href="/account.html">忘记密码 / 验证邮箱</a> · <a href="/download.html">下载电脑助手</a></p>
         <p id="auth-note" role="status"></p>
         <p id="local-hint" class="hint" hidden>
           本机验收环境 · 邀请码 <strong>NEST-LOCAL-04</strong
@@ -73,7 +74,7 @@
           >◈ <span>BNBU <b>CourseNest</b></span></a
         ><button id="mobile-menu" class="secondary">菜单</button>
         <div class="nav-caption">我的学习空间</div>
-        <nav>
+        <nav><a href="/archives.html">▧　学期存档</a><a href="/download.html">↓　下载助手</a>
           <a href="#/overview">◉　总览</a><a href="#/courses">▦　我的课程</a
           ><a href="#/devices">▣　我的设备</a><a href="#/history">↻　任务记录</a
           ><a href="#/settings">⚙　设置</a>
@@ -81,7 +82,7 @@
         <div class="sidebar-footer">
           <strong id="account-label"></strong
           ><button id="logout" class="text-button">退出登录</button
-          ><small>v0.4 正式版 · 非学校官方网站</small>
+          ><small>v0.5 · 非学校官方网站</small>
         </div>
       </aside>
       <main>
@@ -165,24 +166,24 @@
             <div class="steps">
               <div>
                 <b>01</b><strong>启动同步助手</strong>
-                <p>使用提供的 Windows 试用包；本机验收可打开已有助手。</p>
+                <p><a href="/download.html">下载 Windows 助手</a>，完整解压后运行 CourseNestHelper.exe。</p>
                 <a
                   href="http://127.0.0.1:8765/#/settings"
                   target="_blank"
                   rel="noopener"
-                  >在这台电脑打开助手 ↗</a
+                  >打开这台电脑的设置 ↗</a
                 >
               </div>
               <div>
                 <b>02</b><strong>生成配对码</strong>
-                <p>把网站地址和配对码填入助手的“连接 CourseNest”设置。</p>
+                <p>在电脑设置中输入配对码；新版助手已内置官网地址。</p>
                 <button id="new-pair" class="secondary">生成配对码</button>
                 <div id="pair-code" role="status"></div>
               </div>
               <div>
                 <b>03</b><strong>连接学校与授权目录</strong>
                 <p>
-                  在本地助手登录学校账号、添加课程和绑定目录，之后可以从网站管理同步。
+                  在电脑设置连接学校账号、选择课程目录，之后回到官网管理同步。
                 </p>
               </div>
             </div>
@@ -227,7 +228,7 @@
               网站保存课程清单、文件选择和任务状态。文件内容与学校密码保留在配对电脑，解除配对会撤销设备授权并清除网站上的设备清单。
             </p>
             <p class="hint">
-              首版通过邀请码体验，尚未接入邮箱验证与密码找回。请保存好产品账号密码。
+              账号通过邀请码注册；验证邮箱与找回密码请打开账号服务。
             </p>
           </article>
         </section>

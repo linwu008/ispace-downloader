@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ispace-downloader"
-version = "0.4.0"
+version = "0.5.0"
 description = "Local course-aware BNBU iSpace downloader"
 requires-python = ">=3.13,<3.15"
 dependencies = [
   "fastapi>=0.115,<1", "uvicorn>=0.34,<1", "httpx>=0.28,<1",
   "beautifulsoup4>=4.13,<5", "playwright>=1.51,<2", "keyring>=25,<26",
-  "cryptography>=44", "filelock>=3.17,<4", "tzdata>=2025.1",
+  "pypdf>=6,<7", "cryptography>=44", "filelock>=3.17,<4", "tzdata>=2025.1",
 ]
 
 [project.optional-dependencies]

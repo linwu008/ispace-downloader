@@ -6,6 +6,7 @@ import os
 import socket
 import sqlite3
 import threading
+import time
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -33,6 +34,7 @@ class Companion:
         self.path = store.directory / 'companion.enc'
         self.stop_event = threading.Event()
         self.thread = None
+        self.last_archive = 0
         with store.connect() as db:
             exists = db.execute("SELECT 1 FROM sqlite_master WHERE name='companion_receipts'").fetchone()
         backup = store.directory / 'index-pre-v0.4.sqlite3'
@@ -116,7 +118,8 @@ class Companion:
             if row['path'] and not Path(row['path']).is_file():
                 row['status'] = 'missing'
             row['path'] = row['path'] or ''
-        return {'courses': [{'id': c['id'], 'name': c['name'], 'membership': c['membership'], 'sync_mode': c['sync_mode'], 'bound': bool(c['folder']), 'folder': c['folder'] or '', 'enabled': bool(c['enabled'])} for c in values],
+        from . import __version__
+        return {'version': __version__, 'capabilities': ['archive-v1','setup-v1'], 'archive_status': self.store.setting('archive_status', {}), 'courses': [{'id': c['id'], 'name': c['name'], 'membership': c['membership'], 'sync_mode': c['sync_mode'], 'bound': bool(c['folder']), 'folder': c['folder'] or '', 'enabled': bool(c['enabled'])} for c in values],
                 'groups': [{'id': g['id'], 'course_id': g['course_id'], 'title': g['title'], 'folder': g['folder'], 'position': g['position']} for g in catalog.groups(self.store)],
                 'materials': rows, 'auth': self.store.setting('auth_state', 'not_logged_in'), 'paused': config.get('paused', False), 'local_schedule': self.store.setting('schedule_enabled', False), 'truncated': count > len(rows)}
 
@@ -186,6 +189,10 @@ class Companion:
                     self.process(config, reply['job'])
                     # Report completion without claiming another job in this tick.
                     self.request(config, '/device/poll', {'snapshot': self.snapshot(config), 'paused': True})
+                if not paused and time.monotonic()-self.last_archive>60:
+                    self.last_archive=time.monotonic()
+                    from .archive_upload import sync_archives
+                    sync_archives(self, config)
                 self.store.set('companion_status', {'message': '已暂停接收网站任务' if config.get('paused') else '网站已连接，等待同步任务', 'at': now()})
         except Timeout:
             return

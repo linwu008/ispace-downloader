@@ -1,3 +1,11 @@
+## v0.5 发布范围
+
+日常使用 https://bnbucoursenest.cn 。Windows 助手公开下载：https://github.com/linwu008/coursenest-releases/releases/tag/v0.5 。原源码仓库保持私有。
+
+本次不开通 R2：学期存档、分享、知识总结及未配置的邮件恢复暂未开放，页面明确提示。保留现有数据库和同步流程。后续启用步骤见 docs/V0.5-DEPLOYMENT.md。
+
+> v0.5 本地实现与验收中；正式线上版本仍以已发布版本为准。部署配置见 [v0.5 部署说明](docs/V0.5-DEPLOYMENT.md)。
+
 # BNBU CourseNest · v0.4
 
 独立产品网站 + Windows 本地同步助手。正式网站：https://bnbucoursenest.cn 。当前版本 `0.4.0`，发布标签 `v0.4`；保留 v0.1、v0.2、v0.3。

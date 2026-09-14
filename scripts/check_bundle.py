@@ -8,6 +8,7 @@ from pathlib import Path
 import httpx
 
 root = Path(__file__).resolve().parent.parent
+assert not list((root/'dist/CourseNestHelper/_internal/ispace').rglob('*.py')), 'Do not distribute project source files'
 fixture = Path(tempfile.mkdtemp(prefix='coursenest-bundle-'))
 exe = root/'dist/CourseNestHelper/CourseNestHelper.exe'
 process = subprocess.Popen([str(exe), '-m', 'ispace', '--data-dir', str(fixture), 'serve', '--port', '18768'],
@@ -23,8 +24,8 @@ try:
                 if process.poll() is not None:raise RuntimeError('Frozen assistant exited before startup')
                 time.sleep(.4)
         else:raise RuntimeError('Frozen assistant did not start')
-        assert state['version']=='0.4.0' and not state['busy']
-        assert 'id="companion-pair"' in client.get('/').text
+        assert state['version']=='0.5.0' and not state['busy']
+        assert 'id="pair"' in client.get('/').text
         assert not client.get('/api/companion').json()['paired']
         assert client.get('/static/companion.js').status_code==200
         assert client.post('/api/companion/disconnect').status_code==403

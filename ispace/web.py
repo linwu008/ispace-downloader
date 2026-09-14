@@ -125,7 +125,7 @@ def create_app(store=None, service=None):
 
     @app.get("/")
     def index():
-        return FileResponse(static / "index.html")
+        return FileResponse(static / "setup.html")
 
     @app.get("/api/state")
     def state():

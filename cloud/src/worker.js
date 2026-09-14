@@ -1,4 +1,6 @@
-const VERSION = "0.4.0";
+import { advanceKnowledge } from "./knowledge.js";
+import { createV05 } from "./v05.js";
+const VERSION = "0.5.0";
 const enc = new TextEncoder();
 const hex = (b) =>
   Array.from(new Uint8Array(b), (n) => n.toString(16).padStart(2, "0")).join(
@@ -195,6 +197,10 @@ function sanitizeSnapshot(b) {
     };
   });
   return {
+    version: text(b.version, 30),
+    capabilities: Array.isArray(b.capabilities)
+      ? b.capabilities.filter((x) => ["archive-v1", "setup-v1"].includes(x))
+      : [],
     courses,
     groups,
     materials,
@@ -316,7 +322,24 @@ async function due(env, d) {
   await enqueue(env, d, "sync", {}, `daily:${d.id}:${day}`);
   await run(env, "UPDATE devices SET last_day=? WHERE id=?", day, d.id);
 }
+const v05 = createV05({
+  first,
+  all,
+  run,
+  body,
+  json,
+  check,
+  random,
+  sha,
+  now,
+  session,
+  deviceAuth,
+  throttle,
+  passwordHash,
+});
 async function api(request, env, url) {
+  const added = await v05.route(request, env, url);
+  if (added) return added;
   const path = url.pathname,
     method = request.method;
   if (path === "/api/health" && method === "GET")
@@ -324,7 +347,7 @@ async function api(request, env, url) {
       version: VERSION,
       name: "BNBU CourseNest",
       local: env.LOCAL_DEV === "1",
-      registration: "invite",
+      registration: env.INVITE_REQUIRED === "0" ? "open" : "invite",
     });
   const ip = request.headers.get("cf-connecting-ip") || "local";
   if (
@@ -337,14 +360,15 @@ async function api(request, env, url) {
     check(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email), "请输入有效邮箱");
     check(
       typeof b.password === "string" &&
-        b.password.length >= 12 &&
+        b.password.length >= 8 &&
         b.password.length <= 128,
-      "密码需要 12–128 个字符",
+      "密码需要 8–128 个字符",
     );
     let user = await first(env, "SELECT * FROM users WHERE email=?", email);
     if (path.endsWith("register")) {
       check(
-        env.INVITE_CODE && equal(text(b.invite, 200), env.INVITE_CODE),
+        env.INVITE_REQUIRED === "0" ||
+          (env.INVITE_CODE && equal(text(b.invite, 200), env.INVITE_CODE)),
         "邀请码无效；首版仅开放邀请体验",
         403,
       );
@@ -362,6 +386,13 @@ async function api(request, env, url) {
         now(),
       );
       user = { id, email };
+      if (env.MAILER || (env.RESEND_API_KEY && env.MAIL_FROM)) {
+        try {
+          await v05.send(env, user, "verify");
+        } catch {
+          /* Account remains usable; verification can be requested again. */
+        }
+      }
     } else {
       const candidate = await passwordHash(
         b.password,
@@ -514,7 +545,7 @@ async function api(request, env, url) {
   );
   if (path === "/api/me" && method === "GET")
     return json({
-      user: { email: user.email },
+      user: { id: user.id, email: user.email },
       csrf: user.csrf,
       device: publicDevice(d),
       version: VERSION,
@@ -638,6 +669,28 @@ export default {
     return new Response(response.body, { status: response.status, headers });
   },
   async scheduled(_event, env) {
+    try {
+      if (env.ARCHIVE_ENABLED !== "0" && env.ARCHIVE_BUCKET) await advanceKnowledge(env);
+    } catch {
+      /* Archive budgets do not block existing device schedules. */
+    }
+    if (env.ARCHIVE_ENABLED !== "0" && env.ARCHIVE_BUCKET) {
+      const expired = await all(
+        env,
+        "SELECT id FROM uploads WHERE status IN ('pending','expired') AND expires<? LIMIT 50",
+        now(),
+      );
+      for (const u of expired) {
+        await env.ARCHIVE_BUCKET.delete("uploads/" + u.id);
+        await env.ARCHIVE_BUCKET.delete("text/" + u.id);
+        await run(
+          env,
+          "UPDATE uploads SET status='cleaned' WHERE id=? AND status IN ('pending','expired')",
+          u.id,
+        );
+      }
+    }
+    if (env.MAIL_ENABLED !== "0" && (env.MAILER || (env.RESEND_API_KEY && env.MAIL_FROM))) await run(env, "DELETE FROM mail_tokens WHERE expires<?", now());
     const devices = await all(
       env,
       "SELECT * FROM devices WHERE revoked=0 AND schedule_enabled=1",

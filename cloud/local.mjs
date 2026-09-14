@@ -1,5 +1,11 @@
 import { DatabaseSync } from "node:sqlite";
-import { readFileSync, existsSync, mkdirSync } from "node:fs";
+import {
+  readFileSync,
+  existsSync,
+  mkdirSync,
+  writeFileSync,
+  unlinkSync,
+} from "node:fs";
 import { dirname, resolve, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 export const root = dirname(fileURLToPath(import.meta.url));
@@ -11,6 +17,7 @@ export function localEnv(
     mkdirSync(dirname(filename), { recursive: true });
   const db = new DatabaseSync(filename);
   db.exec(readFileSync(resolve(root, "migrations/0001_initial.sql"), "utf8"));
+  db.exec(readFileSync(resolve(root, "migrations/0002_v05.sql"), "utf8"));
   db.exec("PRAGMA journal_mode=WAL");
   const prepare = (sql) => ({
     sql,
@@ -29,7 +36,46 @@ export function localEnv(
       return { meta: db.prepare(this.sql).run(...this.args) };
     },
   });
+  const objectRoot =
+    filename === ":memory:"
+      ? null
+      : resolve(dirname(filename), "archive-objects");
+  const memory = new Map();
+  const objectPath = (key) => {
+    if (!/^[a-z]+\/[a-f0-9]+$/.test(key)) throw Error("Invalid object key");
+    return resolve(objectRoot, key.replace("/", "-"));
+  };
+  const bucket = {
+    async put(key, value) {
+      const bytes =
+        typeof value === "string" ? Buffer.from(value) : Buffer.from(value);
+      if (objectRoot) {
+        mkdirSync(objectRoot, { recursive: true });
+        writeFileSync(objectPath(key), bytes);
+      } else memory.set(key, bytes);
+    },
+    async get(key) {
+      const bytes = objectRoot
+        ? existsSync(objectPath(key))
+          ? readFileSync(objectPath(key))
+          : null
+        : memory.get(key);
+      return bytes
+        ? { body: bytes, text: async () => bytes.toString("utf8") }
+        : null;
+    },
+    async head(key) {
+      const value = await this.get(key);
+      return value ? { size: value.body.length } : null;
+    },
+    async delete(key) {
+      if (objectRoot) {
+        if (existsSync(objectPath(key))) unlinkSync(objectPath(key));
+      } else memory.delete(key);
+    },
+  };
   return {
+    ARCHIVE_BUCKET: bucket,
     LOCAL_DEV: "1",
     PUBLIC_ORIGIN: origin,
     INVITE_CODE: process.env.COURSENEST_INVITE || "NEST-LOCAL-04",

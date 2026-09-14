@@ -1,7 +1,7 @@
 {
   "name": "bnbu-coursenest",
   "private": true,
-  "version": "0.4.0-dev.1",
+  "version": "0.5.0",
   "type": "module",
   "scripts": {
     "dev": "node dev.mjs",

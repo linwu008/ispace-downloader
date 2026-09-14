@@ -14,7 +14,7 @@ const server = createServer(async (req, res) => {
     const chunks = [];
     for await (const chunk of req) {
       size += chunk.length;
-      if (size > 2_000_000) {
+      if (size > 50_000_000) {
         res.writeHead(413);
         res.end();
         return;
@@ -38,7 +38,7 @@ const server = createServer(async (req, res) => {
 });
 server.listen(port, "127.0.0.1", () =>
   console.log(
-    `BNBU CourseNest v0.4 preview: ${origin} (invite: ${env.INVITE_CODE})`,
+    `BNBU CourseNest v0.5 preview: ${origin} (invite: ${env.INVITE_CODE})`,
   ),
 );
 const timer = setInterval(

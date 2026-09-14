@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>学期存档 · CourseNest</title>
+    <link rel="stylesheet" href="/features.css" />
+    <script defer src="/features.js"></script>
+  </head>
+  <body data-feature="archives">
+    <main>
+      <nav>
+        <a href="/">学习空间</a><a href="/download.html">下载助手</a
+        ><a href="/account.html">验证邮箱</a>
+      </nav>
+      <h1>学期存档</h1>
+      <p>
+        开启存档服务后，可在这里保存课程资料的网站副本。请以下方服务状态为准。
+      </p>
+      <p id="message" role="status"></p>
+      <section>
+        <h2>为课程建立学期档案</h2>
+        <form id="create">
+          <label
+            >学年与学期<input
+              id="semester"
+              required
+              maxlength="80"
+              placeholder="例如：2026–2027 第一学期" /></label
+          ><label>课程<select id="course"></select></label
+          ><label
+            >总结语言<select id="language">
+              <option value="zh">中文，保留英文术语</option>
+              <option value="en">英文</option>
+              <option value="bilingual">中英双语</option>
+            </select></label
+          ><label
+            ><input
+              id="automatic"
+              type="checkbox"
+              checked
+            />自动存档该课程已有及后续取得的资料</label
+          >
+          <p>
+            上传前请确认范围。自动模式包含这门课程助手已取得的所有资料；取消勾选后可手动选择。每人初始
+            250 MB，单文件最多 50 MB，原文件保留最新版本。
+          </p>
+          <button>创建档案</button>
+        </form>
+      </section>
+      <div id="archives"></div>
+      <section id="detail" hidden></section>
+    </main>
+  </body>
+</html>
