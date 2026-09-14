@@ -29,6 +29,6 @@ jobs:
       - run: python scripts/check_bundle.py
       - uses: actions/upload-artifact@v4
         with:
-          name: CourseNestHelper-0.4.0.dev1-windows-x64
-          path: dist/CourseNestHelper-0.4.0.dev1-windows-x64.zip
+          name: CourseNestHelper-0.4.0-windows-x64
+          path: dist/CourseNestHelper-0.4.0-windows-x64.zip
           retention-days: 14

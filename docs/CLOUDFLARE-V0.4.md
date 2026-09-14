@@ -1,4 +1,4 @@
-# v0.4 Cloudflare 部署准备（验收后执行）
+# v0.4 Cloudflare 部署说明
 
 本版无需购买域名即可先部署到 Workers 提供的地址。域名可以在阿里云购买，续费继续由阿里云管理，再将 DNS 接入 Cloudflare。没有内网穿透。以下命令只是说明，首版交付时尚未执行远端资源创建或发布。
 
@@ -14,19 +14,15 @@ node --test cloud/test/*.test.mjs
 .venv\Scripts\python.exe scripts/check_ui_v4.py
 ```
 
-## 当前部署进度（2026-09-14）
+## 当前部署状态（2026-09-14）
 
-用户已将 `bnbucoursenest.cn` 接入 Cloudflare，并创建 D1 数据库 `coursenest`，ID 为 `743d0018-d56f-4e10-8d87-666613847f84`。仓库配置已填写此 ID 与正式 `PUBLIC_ORIGIN=https://bnbucoursenest.cn`；数据库 ID 不是访问密钥。
+正式网站 `https://bnbucoursenest.cn` 已部署，D1 数据库 `coursenest` 已初始化，运行时 `INVITE_CODE` Secret 已配置，真实助手已配对并持续心跳。数据库 ID 为 `743d0018-d56f-4e10-8d87-666613847f84`，不是访问密钥。
 
-D1 控制台查询已确认六张业务表存在：`users`、`sessions`、`pairings`、`devices`、`jobs`、`throttles`。Workers 项目已创建；首次使用 `main` 构建因缺少 `cloud` 根目录失败。用户随后将生产分支改为 `codex/v0.4-coursenest`，并重新选择构建令牌。下一次推送用于触发该分支的新构建，构建结果仍需在 Cloudflare 核对。
+Workers Builds 使用项目名 `bnbu-coursenest`、根目录 `cloud`、生产分支 `codex/v0.4-coursenest`，构建命令留空，部署命令 `npx wrangler deploy`。v0.4 发布后 main 同步到正式版本；目前 Cloudflare 自动部署仍跟踪原分支，避免中断既有配置。
 
-尚需完成：
+生产域名已在 Worker 绑定，`PUBLIC_ORIGIN=https://bnbucoursenest.cn`。邀请码保存在运行时 Secret，不放在构建变量或 Git 中。临时 workers.dev 地址不在允许范围。
 
-1. 六张业务表已创建；如需进一步核对完整结构，可运行下方幂等迁移命令，补齐索引并记录迁移版本。不要重新创建数据库。
-2. Workers Builds 使用项目名 `bnbu-coursenest`、根目录 `cloud` 和分支 `codex/v0.4-coursenest`。构建命令留空，部署命令 `npx wrangler deploy`。若创建向导不提供分支选择，应在部署设置中核对生产分支；`main` 仍是 v0.3，不可直接用来部署本网站。
-3. 部署 Worker 后，在 Settings 的运行时 Variables and Secrets 中新增 Secret `INVITE_CODE`。创建向导的构建变量不能代替运行时 Secret。邀请码由用户设置，不提交到 Git。
-4. 在 Worker Settings → Domains & Routes 添加自定义域名 `bnbucoursenest.cn`。当前严格校验正式域名，通过临时 `workers.dev` 地址访问会返回“网站地址未获授权”，应使用绑定后的正式域名验收。
-5. 完成真实 Cloudflare 注册、配对、任务和安全隔离验收。当前配置更新不代表已完成远端迁移或部署。
+已验证公网健康接口、真实电脑配对与心跳；跨账号隔离、选择同步、去重等由模拟平台测试覆盖，多台物理电脑公网验收尚未执行。
 
 ## Wrangler 部署步骤
 

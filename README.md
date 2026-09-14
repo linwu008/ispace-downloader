@@ -1,16 +1,17 @@
-# BNBU CourseNest · v0.4 试用版
+# BNBU CourseNest · v0.4
 
-独立产品网站 + Windows 本地同步助手。网站负责产品账号、设备配对、课程选择和任务；学校密码与文件留在各自电脑。当前版本 `0.4.0.dev1`，尚未正式发布。
+独立产品网站 + Windows 本地同步助手。正式网站：https://bnbucoursenest.cn 。当前版本 `0.4.0`，发布标签 `v0.4`；保留 v0.1、v0.2、v0.3。
 
-双击 **`start-v04.cmd`** 体验本机网站 `http://127.0.0.1:8787`；本机注册邀请码 `NEST-LOCAL-04`。原有助手仍在 `http://127.0.0.1:8765`，保留分类、预览、整理和本地任务记录。网站配对之前不会上传课程清单。
+网站负责产品账号、设备配对、课程选择和任务；学校密码与文件留在各自电脑。注册需要邀请码。下载 Windows 助手后解压整个目录，运行 `CourseNestHelper.exe`，在助手中登录学校、绑定课程目录，再使用正式网站生成的配对码连接。网站地址与生成配对码的网站必须一致。
 
-- [首版体验与验收](docs/V0.4-TRIAL.md)
+- [Windows 助手下载与发布记录](https://github.com/linwu008/ispace-downloader/releases/tag/v0.4)（当前仓库为私有，需仓库访问权限）
 - [Windows 独立助手说明](docs/WINDOWS-ASSISTANT.md)
-- [Cloudflare 部署准备](docs/CLOUDFLARE-V0.4.md)
+- [Cloudflare 部署说明](docs/CLOUDFLARE-V0.4.md)
+- [v0.4 验证记录](docs/V0.4-TRIAL.md)
 
-域名与实际 Cloudflare 部署待用户验收后进行；本机地址只能在当前电脑访问。Windows 试用包由 `scripts/build_assistant.ps1` 生成到 `dist/`，需先安装 `requirements-build.lock` 中的构建依赖。开发用网站需要 Node.js 24；独立助手最终用户无需安装 Node 或 Python。
+独立助手用户无需安装 Python 或 Node.js，需要 Windows 10/11 x64 与 Microsoft Edge。电脑需开机联网并运行助手才能同步。本版未提供自动更新，升级前退出旧助手，再完整替换程序目录；用户数据保存在独立数据目录。
 
-当前正式版本：`0.3.0`，发布标签 `v0.3`。用户已确认发布；历史版本 `v0.1`、`v0.2` 保留。
+开发者仍可通过 `start-v04.cmd` 启动本地网站 http://127.0.0.1:8787 ，本地测试邀请码 `NEST-LOCAL-04` 仅用于本机。构建助手需 `requirements-build.lock` 中的依赖，运行 `scripts/build_assistant.ps1`，产物位于 `dist/`。
 
 ## 本地助手使用（沿用 v0.3）
 

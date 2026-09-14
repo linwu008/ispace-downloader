@@ -23,7 +23,7 @@ try:
                 if process.poll() is not None:raise RuntimeError('Frozen assistant exited before startup')
                 time.sleep(.4)
         else:raise RuntimeError('Frozen assistant did not start')
-        assert state['version']=='0.4.0.dev1' and not state['busy']
+        assert state['version']=='0.4.0' and not state['busy']
         assert 'id="companion-pair"' in client.get('/').text
         assert not client.get('/api/companion').json()['paired']
         assert client.get('/static/companion.js').status_code==200

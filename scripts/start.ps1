@@ -5,7 +5,7 @@ if (-not (Test-Path '.venv\Scripts\python.exe')) { & "$PSScriptRoot\setup.ps1" }
 $python = Join-Path $projectRoot '.venv\Scripts\python.exe'
 $url = 'http://127.0.0.1:8765'
 $ready = $false
-try { $state = Invoke-RestMethod "$url/api/state" -TimeoutSec 2; $ready = ($state.version -eq '0.4.0.dev1') } catch { }
+try { $state = Invoke-RestMethod "$url/api/state" -TimeoutSec 2; $ready = ($state.version -eq '0.4.0') } catch { }
 if (-not $ready) {
     $runtime = Join-Path $projectRoot '.runtime'
     New-Item -ItemType Directory -Path $runtime -Force | Out-Null
@@ -13,7 +13,7 @@ if (-not $ready) {
     $process.Id | Set-Content -LiteralPath "$runtime\server.pid"
     for ($attempt = 0; $attempt -lt 30; $attempt++) {
         Start-Sleep -Milliseconds 500
-        try { $state = Invoke-RestMethod "$url/api/state" -TimeoutSec 2; $ready = ($state.version -eq '0.4.0.dev1') } catch { }
+        try { $state = Invoke-RestMethod "$url/api/state" -TimeoutSec 2; $ready = ($state.version -eq '0.4.0') } catch { }
         if ($ready) { break }
         if ($process.HasExited) { break }
     }

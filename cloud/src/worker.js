@@ -1,4 +1,4 @@
-const VERSION = "0.4.0.dev1";
+const VERSION = "0.4.0";
 const enc = new TextEncoder();
 const hex = (b) =>
   Array.from(new Uint8Array(b), (n) => n.toString(16).padStart(2, "0")).join(

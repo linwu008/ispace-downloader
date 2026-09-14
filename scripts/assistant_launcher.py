@@ -90,7 +90,7 @@ def main():
                 icon.stop()
         except Timeout:
             alert('仍有任务正在执行，请等待完成后退出，以保证文件完整。')
-    tray = pystray.Icon('BNBUCourseNest', picture, 'BNBU CourseNest · v0.4 试用版', pystray.Menu(
+    tray = pystray.Icon('BNBUCourseNest', picture, 'BNBU CourseNest · v0.4 正式版', pystray.Menu(
         pystray.MenuItem('打开同步助手', open_ui, default=True),
         pystray.MenuItem('Windows 登录后启动', toggle_autorun, checked=autorun_enabled),
         pystray.MenuItem('退出同步助手', quit_app)))
