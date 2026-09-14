@@ -117,3 +117,19 @@ def test_assistant_autostart_uses_supported_application_lifecycle(setup, monkeyp
     with TestClient(app) as client:
         assert events == ['start']
     assert events == ['start', 'stop']
+
+
+def test_website_link_opens_assistant_but_cross_site_apis_stay_blocked(setup):
+    companion, store, _, _ = setup
+    with TestClient(create_app(store, companion.service), base_url='http://127.0.0.1:8765') as client:
+        headers = {'Sec-Fetch-Site': 'cross-site', 'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Dest': 'document'}
+        response = client.get('/', headers=headers)
+        assert response.status_code == 200
+        assert "frame-ancestors 'none'" in response.headers['content-security-policy']
+        assert client.get('/api/state', headers=headers).status_code == 403
+        assert client.get('/', headers={**headers, 'Sec-Fetch-Dest': 'iframe'}).status_code == 403
+        assert client.get('/', headers={**headers, 'Sec-Fetch-Mode': 'cors'}).status_code == 403
+        token = client.get('/api/state').json()['csrf']
+        assert client.post('/api/companion/pair', headers={**headers, 'X-iSpace-Token': token}, json={'server':'https://example.com','code':'test'}).status_code == 403
+        assert client.get('/', headers={**headers, 'Origin': 'https://example.com'}).status_code == 403
+        assert client.get('/', headers={**headers, 'Host': 'attacker.example'}).status_code == 403

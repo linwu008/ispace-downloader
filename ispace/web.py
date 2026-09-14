@@ -85,7 +85,14 @@ def create_app(store=None, service=None):
         origin = request.headers.get("origin")
         if origin and origin != str(request.base_url).rstrip("/"):
             return JSONResponse({"detail": "拒绝跨站请求"}, status_code=403)
-        if request.headers.get("sec-fetch-site") == "cross-site":
+        # Allow a website link to open the UI, but never cross-site API access.
+        page_navigation = (
+            request.method == "GET"
+            and request.url.path == "/"
+            and request.headers.get("sec-fetch-mode") == "navigate"
+            and request.headers.get("sec-fetch-dest") == "document"
+        )
+        if request.headers.get("sec-fetch-site") == "cross-site" and not page_navigation:
             return JSONResponse({"detail": "拒绝跨站请求"}, status_code=403)
         if request.method not in {"GET", "HEAD"} and not secrets.compare_digest(request.headers.get("x-ispace-token", ""), csrf):
             return JSONResponse({"detail": "页面已过期，请刷新后再试"}, status_code=403)
