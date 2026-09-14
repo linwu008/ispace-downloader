@@ -91,6 +91,8 @@ function fail(e) {
   }
 }
 function signedOut() {
+  $("feature-view").hidden = true;
+  $("feature-view").replaceChildren(); featureViews.clear(); featureOpen = false;
   $("session-loading").hidden = true;
   lastSnapshot = -1;
   state = null;
@@ -102,6 +104,7 @@ function signedOut() {
   $("workspace").hidden = true;
   $("welcome").hidden = false;
   for (const d of document.querySelectorAll("dialog[open]")) d.close();
+  if (featurePages[location.hash.slice(2)]) route();
 }
 function snapshot() {
   return state?.device?.snapshot || { courses: [], groups: [], materials: [] };
@@ -115,8 +118,63 @@ function files() {
 function groups() {
   return snapshot().groups || [];
 }
+const featurePages = {archives: "/archives.html", download: "/download.html", account: "/account.html"};
+const featureViews = new Map();
+let returnView = { hash: "#/overview", x: 0, y: 0 }, featureOpen = false;
+async function showFeature(name) {
+  const host = $("feature-view");
+  let view = featureViews.get(name);
+  for (const child of host.children) child.hidden = true;
+  if (view) { view.hidden = false; return; }
+  view = document.createElement("div");
+  featureViews.set(name, view); host.append(view);
+  const root = view.attachShadow({mode: "open"});
+  try {
+    const response = await fetch(featurePages[name]);
+    if (!response.ok) throw Error("页面暂时无法打开");
+    const html = new DOMParser().parseFromString(await response.text(), "text/html");
+    const sheet = document.createElement("link"); sheet.rel = "stylesheet"; sheet.href = "/features.css";
+    const content = document.createElement("div"); content.dataset.feature = name;
+    content.append(document.importNode(html.querySelector("main"), true));
+    root.append(sheet, content);
+    await window.mountCourseNestFeature(root, featurePages[name]);
+  } catch {
+    featureViews.delete(name); root.replaceChildren();
+    root.append(el("p", "页面暂时无法打开，请返回后重试。"));
+    const back = el("a", "返回原来的页面"); back.href = "/"; root.append(back);
+  }
+}
+function navigateFeature(name) {
+  if (!featureOpen) returnView = {hash:location.hash || "#/overview", x:scrollX, y:scrollY};
+  history.pushState(null, "", "#/" + name); route(); window.scrollTo(0,0);
+}
+document.addEventListener("click", (event) => {
+  if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+  const link = event.composedPath().find(n => n instanceof HTMLAnchorElement);
+  if (!link || link.target || link.hasAttribute("download")) return;
+  const url = new URL(link.href, location.href);
+  if (url.origin !== location.origin) return;
+  const name = Object.keys(featurePages).find(k => featurePages[k] === url.pathname);
+  if (name && !url.hash) { event.preventDefault(); navigateFeature(name); }
+  else if (featureOpen && url.pathname === "/" && !url.hash) {
+    event.preventDefault(); history.pushState(null, "", returnView.hash); route();
+  }
+});
+window.addEventListener("popstate", route);
 function route() {
   const page = location.hash.slice(2) || "overview";
+  if (featurePages[page]) {
+    featureOpen = true;
+    $("workspace").hidden = true; $("welcome").hidden = true;
+    $("feature-view").hidden = false;
+    if (!featureViews.has(page) || ![...$("feature-view").children].some(n => !n.hidden && n === featureViews.get(page))) showFeature(page);
+    document.title = ({archives:"学期存档", download:"下载助手", account:"账号服务"})[page] + " · CourseNest";
+    return;
+  }
+  const restoring = featureOpen;
+  featureOpen = false; $("feature-view").hidden = true;
+  $("workspace").hidden = !state;
+  if ($("session-loading").hidden) $("welcome").hidden = !!state;
   const chosen = names[page] ? page : "overview";
   document
     .querySelectorAll("[data-page]")
@@ -128,6 +186,7 @@ function route() {
   $("breadcrumb").textContent = "工作空间 / " + names[chosen];
   document.title = names[chosen] + " · BNBU CourseNest";
   $("sidebar").classList.remove("open");
+  if (restoring) window.scrollTo(returnView.x, returnView.y);
 }
 window.addEventListener("hashchange", route);
 $("mobile-menu").onclick = () => $("sidebar").classList.toggle("open");

@@ -1,4 +1,4 @@
-body {
+body, :host {
   background: #f5f7f1;
   color: #203e35;
   font:
@@ -75,3 +75,5 @@ input[type="checkbox"] {
     padding: 16px;
   }
 }
+
+[hidden] { display: none !important; }

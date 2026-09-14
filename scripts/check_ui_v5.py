@@ -69,6 +69,28 @@ try:
         page.route('**/api/me',lambda route:route.abort())
         page.goto(origin+'/');expect(page.locator('#session-retry')).to_be_visible();expect(page.locator('#welcome')).to_be_hidden()
         page.unroute('**/api/me');page.locator('#session-retry').click();expect(page.locator('#workspace')).to_be_visible()
+        # Internal feature navigation retains this document and unsaved form state.
+        page.goto(origin+'/#/settings');expect(page.locator('#workspace')).to_be_visible()
+        page.locator('#schedule-time').fill('19:42')
+        page.evaluate("window.returnNavigationMarker = 'same-document'; window.scrollTo(0, 250)")
+        original_scroll=page.evaluate('scrollY')
+        for path,label in [('/archives.html','学习空间'),('/download.html','CourseNest 官网')]:
+            page.locator('#sidebar a[href="'+path+'"]').click()
+            expect(page.locator('#feature-view')).to_be_visible()
+            expect(page.locator('#workspace')).to_be_hidden()
+            page.locator('#feature-view').get_by_role('link',name=label,exact=True).click()
+            expect(page).to_have_url(origin+'/#/settings')
+            expect(page.locator('#workspace')).to_be_visible()
+            expect(page.locator('#session-loading')).to_be_hidden()
+            expect(page.locator('#welcome')).to_be_hidden()
+            assert page.evaluate('window.returnNavigationMarker')=='same-document'
+            expect(page.locator('#schedule-time')).to_have_value('19:42')
+            assert abs(page.evaluate('scrollY')-original_scroll)<2
+        page.locator('#sidebar a[href="/download.html"]').click()
+        expect(page.locator('#feature-view')).to_be_visible()
+        page.go_back();expect(page.locator('#workspace')).to_be_visible();expect(page).to_have_url(origin+'/#/settings')
+        page.go_forward();expect(page.locator('#feature-view')).to_be_visible()
+        page.locator('#feature-view').get_by_role('link',name='CourseNest 官网',exact=True).click()
         guest=browser.new_context();gp=guest.new_page();gp.goto(origin+'/');expect(gp.locator('#welcome')).to_be_visible();expect(gp.locator('#session-loading')).to_be_hidden()
         assert not errors,errors
         browser.close()

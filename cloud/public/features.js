@@ -1,5 +1,7 @@
 "use strict";
-const $ = (id) => document.getElementById(id),
+window.mountCourseNestFeature = async function(root = document, pageUrl = location.href) {
+const featureLocation = new URL(pageUrl, location.origin);
+const $ = (id) => root.querySelector("#" + id),
   make = (tag, text) => {
     const e = document.createElement(tag);
     if (text !== undefined) e.textContent = text;
@@ -38,7 +40,7 @@ function button(text, fn) {
   return b;
 }
 async function initialize() {
-  const feature = document.body.dataset.feature;
+  const feature = root.querySelector("[data-feature]")?.dataset.feature || document.body.dataset.feature;
   if (feature === "download") {
     const h = await api("/helper");
     $("download").replaceChildren();
@@ -71,7 +73,7 @@ async function initialize() {
     csrf = state.csrf;
   } catch {}
   if (feature === "account") {
-    const parts = location.hash.slice(1).split("/"),
+    const parts = featureLocation.hash.slice(1).split("/"),
       kind = parts[0],
       token = parts[1];
     $("forgot").onsubmit = (e) => {
@@ -332,7 +334,9 @@ async function initialize() {
     }
   }
   await list();
-  const match = location.hash.match(/^#([a-f0-9]+)(?:\?share=(.*))?$/);
+  const match = featureLocation.hash.match(/^#([a-f0-9]+)(?:\?share=(.*))?$/);
   if (match) await detail(match[1], match[2] || "");
 }
-act(initialize);
+await act(initialize);
+};
+if (document.body.dataset.feature) window.mountCourseNestFeature();
