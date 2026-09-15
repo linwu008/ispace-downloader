@@ -497,3 +497,41 @@ test("full manual queue still drains when a daily check is due", async () => {
     env.close();
   }
 });
+
+
+test("v06 cancellation requires owner and helper acknowledgement", async () => {
+ const env=localEnv();try {
+ const {auth,d}=await seed(env);
+ await request(env,"/device/poll","POST",{snapshot:{...snapshot(),capabilities:["cancel-v1"]},paused:true},d);
+ const queued=await enqueue(env,auth);
+ const other=await user(env,"other@example.test");
+ assert.equal((await request(env,`/jobs/${queued.body.id}/cancel`,"POST",{},other)).status,404);
+ assert.equal((await request(env,`/jobs/${queued.body.id}/cancel`,"POST",{},auth)).status,200);
+ assert.equal((await request(env,"/jobs","GET",null,auth)).body.items[0].status,"canceled");
+ const running=await enqueue(env,auth);
+ const claimed=(await request(env,"/device/poll","POST",{snapshot:{...snapshot(),capabilities:["cancel-v1"]}},d)).body.job;
+ assert.equal(claimed.id,running.body.id);
+ await request(env,`/jobs/${claimed.id}/cancel`,"POST",{},auth);
+ const heartbeat=await request(env,`/device/jobs/${claimed.id}/heartbeat`,"POST",{lease_token:claimed.lease_token},d);
+ assert.equal(heartbeat.body.cancel_requested,true);
+ await enqueue(env,auth);
+ const blocked=(await request(env,"/device/poll","POST",{snapshot:snapshot()},d)).body;
+ assert.equal(blocked.job,null);assert.equal(blocked.cancellations[0].id,claimed.id);
+ assert.equal((await request(env,`/device/jobs/${claimed.id}/complete`,"POST",{lease_token:claimed.lease_token,status:"canceled",result:{message:"stopped"}},d)).status,200);
+ assert.ok((await request(env,"/device/poll","POST",{snapshot:snapshot()},d)).body.job);
+ }finally{env.close();}
+});
+
+test("v06 conflicting old plan waits for explicit choice",async()=>{
+ const env=localEnv();try{
+ const {auth,d}=await seed(env);
+ await request(env,"/schedule","PUT",{enabled:true,time:"21:00"},auth);
+ const snap={...snapshot(),capabilities:["schedule-v1"],plan_migration:{pending:true,enabled:true,time:"19:42"}};
+ const poll=await request(env,"/device/poll","POST",{snapshot:snap,paused:true},d);
+ assert.equal(poll.body.plan.conflict,true);
+ assert.equal((await request(env,"/schedule","PUT",{enabled:true,time:"19:42"},auth)).status,200);
+ const me=(await request(env,"/me","GET",null,auth)).body;
+ assert.equal(me.device.schedule.time,"19:42");
+ assert.ok((await request(env,"/jobs","GET",null,auth)).body.items.some(j=>j.kind==="schedule_resolve"));
+ }finally{env.close();}
+});

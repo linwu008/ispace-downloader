@@ -58,6 +58,8 @@ try:
         page.locator('#invite').fill('NEST-LOCAL-04')
         page.locator('#auth-submit').click()
         expect(page.locator('#workspace')).to_be_visible()
+        expect(page.locator('#setup-dialog')).to_be_visible()
+        page.locator('[data-close="setup-dialog"]').click()
         page.locator('nav a[href="#/devices"]').click()
         page.locator('#new-pair').click()
         expect(page.locator('#pair-code')).to_contain_text('分钟')

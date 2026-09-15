@@ -13,6 +13,15 @@
       <p>这里只设置这台电脑。课程、同步和学期存档请在官网管理。</p>
       <a href="https://bnbucoursenest.cn">返回 CourseNest 官网 ↗</a>
       <p id="message" role="status">正在连接助手…</p>
+      <p id="operation-state"></p>
+      <section class="card"><h2>保存位置</h2><p id="folder-summary">首次使用请选择总目录或逐课程设置。</p><button id="folder-mode">设置 / 更改保存位置</button><p>支持选择文件夹或粘贴完整路径。迁移仅处理助手记录的课程文件。</p></section>
+      <dialog id="folder-dialog"><h2>设置保存位置</h2><form id="folder-form">
+        <label>设置方式<select id="folder-kind"><option value="root">统一总目录（自动按课程整理）</option><option value="individual">每门课程单独设置</option><option value="course" hidden>当前课程</option></select></label>
+        <label>完整路径<input id="folder-path" placeholder="例如 D:\学习资料" maxlength="2000" /></label>
+        <button type="button" id="browse-folder">浏览选择文件夹</button><button type="button" id="check-folder">检查路径</button>
+        <label>更换目录时<select id="folder-migrate"><option value="false">仅后续下载使用新目录，旧文件保留</option><option value="true">同时迁移已下载文件（同名不同内容保留两份）</option></select></label>
+        <p id="folder-status" role="status"></p><button type="submit">保存设置</button><button type="button" id="close-folder">关闭</button>
+      </form></dialog>
       <section class="card">
         <h2>1. 连接官网账号</h2>
         <p id="connection"></p>
@@ -34,9 +43,9 @@
       </section>
       <section class="card">
         <h2>运行设置</h2>
-        <button id="disconnect">断开当前配对</button
-        ><button id="disable-schedule">关闭旧的电脑每日计划</button>
-        <p>关闭旧计划后，可在官网统一设置每日同步；不会删除已下载文件。</p>
+        <p id="plan-status">每日同步计划统一在官网设置。</p>
+        <a href="https://bnbucoursenest.cn/#/settings">打开官网计划设置</a>
+        <button id="disconnect">断开当前配对</button>
       </section>
       <p>设置完成后可以关闭此页面，保持助手在后台运行。</p>
     </main>

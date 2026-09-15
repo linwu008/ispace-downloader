@@ -10,6 +10,7 @@ const $ = (id) => root.querySelector("#" + id),
 let csrf = "",
   state = null;
 async function api(path, method = "GET", data) {
+  if (window.CourseNestDemo?.enabled()) return window.CourseNestDemo.request(path,method,data);
   const r = await fetch("/api" + path, {
     method,
     headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
@@ -40,10 +41,16 @@ function button(text, fn) {
   return b;
 }
 async function initialize() {
+  if(window.CourseNestDemo?.enabled()) {
+    const notice=make("p","访客演示：所有资料和操作均为模拟，不会连接真实电脑或保存文件。");
+    notice.setAttribute("role","status");
+    root.querySelector("main")?.prepend(notice);
+  }
   const feature = root.querySelector("[data-feature]")?.dataset.feature || document.body.dataset.feature;
   if (feature === "download") {
     const h = await api("/helper");
     $("download").replaceChildren();
+    if (h.demo) { $("download").textContent="演示模式：此处不实际下载安装程序。"; $("local-link").removeAttribute("href"); $("local-link").textContent="演示模式不会打开真实电脑设置"; return; }
     if (h.url) {
       const a = make("a", "下载 Windows 助手 v" + h.version);
       a.href = h.url;

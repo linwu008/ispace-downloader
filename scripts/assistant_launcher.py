@@ -32,10 +32,18 @@ def main():
     from ispace.web import create_app
     from ispace import __version__
     url = 'http://127.0.0.1:8765'
+    def open_ui(icon=None, item=None):
+        try:
+            state = httpx.get(url+'/api/state', trust_env=False, timeout=3).json()
+            paired = httpx.get(url+'/api/companion', trust_env=False, timeout=3).json().get('paired')
+            ready = paired and state.get('auth') == 'logged_in' and state.get('folder_setup', {}).get('mode') and not state.get('folder_warning')
+        except (httpx.HTTPError, ValueError):
+            ready = False
+        webbrowser.open('https://bnbucoursenest.cn' if ready else url+'/')
     try:
         response = httpx.get(url + '/api/state', timeout=2, trust_env=False)
         if response.status_code == 200 and response.json().get('version') == __version__:
-            webbrowser.open('https://bnbucoursenest.cn' if httpx.get(url+'/api/companion',trust_env=False).json().get('paired') and httpx.get(url+'/api/state',trust_env=False).json().get('auth')=='logged_in' else url+'/')
+            open_ui()
             return
         alert('本机 8765 端口已有其他版本运行，请先关闭旧版助手，再启动 CourseNest。')
         return
@@ -61,8 +69,6 @@ def main():
     draw.rounded_rectangle((12,18,52,49), radius=5, outline='#e5ecd8', width=4)
     draw.line((20,29,44,29), fill='#e5ecd8', width=3)
     draw.line((20,38,38,38), fill='#e5ecd8', width=3)
-    def open_ui(icon=None, item=None):
-        webbrowser.open('https://bnbucoursenest.cn' if httpx.get(url+'/api/companion',trust_env=False).json().get('paired') and httpx.get(url+'/api/state',trust_env=False).json().get('auth')=='logged_in' else url+'/')
     def autorun_enabled(item=None):
         import winreg
         try:
@@ -90,8 +96,8 @@ def main():
                 icon.stop()
         except Timeout:
             alert('仍有任务正在执行，请等待完成后退出，以保证文件完整。')
-    tray = pystray.Icon('BNBUCourseNest', picture, 'BNBU CourseNest · v0.5', pystray.Menu(
-        pystray.MenuItem('打开同步助手', open_ui, default=True),
+    tray = pystray.Icon('BNBUCourseNest', picture, 'BNBU CourseNest · v0.6', pystray.Menu(
+        pystray.MenuItem('打开官网', open_ui, default=True),
         pystray.MenuItem('电脑设置', lambda icon,item:webbrowser.open(url+'/')),
         pystray.MenuItem('Windows 登录后启动', toggle_autorun, checked=autorun_enabled),
         pystray.MenuItem('退出同步助手', quit_app)))

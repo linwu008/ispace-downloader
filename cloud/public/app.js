@@ -20,7 +20,8 @@ const statuses = {
   partial: "部分完成",
   failed: "失败",
   auth_required: "请在助手重新登录",
-  canceled: "已撤销",
+  canceled: "已取消",
+  canceling: "取消请求已提交",
   downloaded: "已下载",
   existing: "已下载",
   missing: "本地缺失",
@@ -29,6 +30,7 @@ const statuses = {
   skipped: "已下载",
 };
 const kinds = {
+  schedule_resolve: "合并每日计划",
   refresh_courses: "刷新学校课程",
   add_courses: "添加课程",
   remove_courses: "移出课程",
@@ -54,6 +56,7 @@ const time = (value) =>
       )
     : "尚未连接";
 async function api(path, method = "GET", body) {
+  if (window.CourseNestDemo.enabled()) return window.CourseNestDemo.request(path, method, body);
   const res = await fetch("/api" + path, {
     method,
     ...(path === "/me" ? { signal: AbortSignal.timeout(15000) } : {}),
@@ -214,6 +217,7 @@ $("auth-form").onsubmit = async (event) => {
     });
     $("password").value = "";
     await refresh();
+    if (register) $("setup-dialog").showModal();
   } catch (e) {
     $("auth-note").textContent = e.message;
   } finally {
@@ -223,6 +227,7 @@ $("auth-form").onsubmit = async (event) => {
 $("logout").onclick = async () => {
   try {
     await api("/auth/logout", "POST");
+    $("demo-banner").hidden=true;
     signedOut();
   } catch (e) {
     fail(e);
@@ -235,7 +240,7 @@ async function queue(kind, payload = {}) {
     request_id: crypto.randomUUID(),
   });
   notice(
-    state?.device?.online
+    window.CourseNestDemo.enabled() ? "模拟任务已创建，不会执行真实下载。" : state?.device?.online
       ? "任务已交给同步助手，完成后会更新状态。"
       : "任务已保存，电脑恢复在线后执行。",
   );
@@ -283,9 +288,9 @@ function renderDevice() {
   const box = $("device-detail");
   box.replaceChildren();
   const d = state.device;
-  if (d && !d.snapshot?.version?.startsWith("0.5.")) {
+  if (d && !d.snapshot?.capabilities?.includes("cancel-v1")) {
     const upgrade = el("p", "助手有新版可用；原有同步仍可使用。 ");
-    const link = el("a", "下载 v0.5 助手"); link.href = "/download.html";
+    const link = el("a", "下载 v0.6 助手"); link.href = "/download.html";
     upgrade.append(link); box.append(upgrade);
   }
   $("new-pair").disabled = !!d;
@@ -350,7 +355,12 @@ function renderJobs() {
         "pill " + (job.status === "failed" ? "failed" : ""),
       ),
     );
-    if (["failed", "partial", "auth_required"].includes(job.status)) {
+    if (["queued", "running"].includes(job.status)) {
+      const cancel = el("button", "取消任务", "text-button");
+      cancel.onclick = async () => {cancel.disabled=true;try {await api("/jobs/"+job.id+"/cancel", "POST", {});await refresh();}catch(e){fail(e);}finally{cancel.disabled=false;}};
+      copy.append(cancel);
+    }
+    if (job.kind !== "schedule_resolve" && ["failed", "partial", "auth_required"].includes(job.status)) {
       const retry = el("button", "重新执行", "text-button");
       retry.onclick = () => queue(job.kind, job.payload).catch(fail);
       copy.append(retry);
@@ -367,6 +377,7 @@ async function refresh() {
   try {
     const value = await api("/me");
     state = value;
+    $("demo-banner").hidden = !window.CourseNestDemo.enabled();
     $("session-loading").hidden = true;
     $("welcome").hidden = true;
     $("workspace").hidden = false;
@@ -390,13 +401,14 @@ async function refresh() {
       ["downloaded", "existing", "skipped"].includes(f.status),
     ).length;
     $("metric-jobs").textContent = jobs.filter((j) =>
-      ["queued", "running"].includes(j.status),
+      ["queued", "running", "canceling"].includes(j.status),
     ).length;
     $("metric-time").textContent = d?.schedule.enabled
       ? d.schedule.time
       : "未开启";
     $("snapshot-at").textContent = d ? "清单更新于 " + time(s.at) : "";
     $("sync-all").disabled = !d;
+    $("sync-all").textContent = window.CourseNestDemo.enabled() ? "模拟同步" : "立即同步";
     $("refresh-courses").disabled = !d;
     $("add-courses").disabled = !d;
     $("next-title").textContent = d
@@ -410,8 +422,14 @@ async function refresh() {
       $("schedule-time").value = d?.schedule.time || "20:00";
     }
     $("local-schedule-note").textContent = s.local_schedule
-      ? "该电脑原有每日计划仍开启。请先在同步助手中关闭，再启用网站计划，避免重复检查。"
+      ? "请更新到 v0.6 助手，原电脑计划将迁移到官网；迁移完成前暂不启用第二套计划。"
       : "任务执行时，电脑需要开机联网且助手正在运行。";
+    const migration = s.plan_migration;
+    $("plan-conflict").hidden = !(migration?.pending && migration.enabled && d?.schedule.enabled && migration.time !== d.schedule.time);
+    if (!$("plan-conflict").hidden) {
+      $("keep-local").textContent = "保留原电脑计划（"+migration.time+"）";
+      $("keep-site").textContent = "保留官网计划（"+d.schedule.time+"）";
+    }
     renderDevice();
     renderJobs();
     const snapshotKey = JSON.stringify(s);
@@ -695,6 +713,12 @@ $("schedule-form").onsubmit = async (event) => {
     fail(e);
   }
 };
+$("guest-enter").onclick = () => {window.CourseNestDemo.enter();refresh();};
+$("demo-exit").onclick = () => {window.CourseNestDemo.exit();$("demo-banner").hidden=true;history.replaceState(null,"","/");signedOut();};
+$("setup-guide").onclick = () => {$("demo-folder-controls").hidden=!window.CourseNestDemo.enabled();$("setup-dialog").showModal();};
+$("demo-folder-save").onclick = () => {$("demo-folder-note").textContent="模拟保存成功，没有访问真实文件夹。";};
+$("guide-local").addEventListener("click",e=>{if(window.CourseNestDemo.enabled()){e.preventDefault();$("demo-folder-controls").hidden=false;}});
+for (const which of ["local","site"]) $("keep-"+which).onclick = async () => {try{await api("/schedule","PUT",{enabled:true,time:which==="local"?snapshot().plan_migration.time:state.device.schedule.time});await refresh();notice("已提交计划选择，等待助手确认。");}catch(e){fail(e);}};
 api("/health")
   .then((h) => {
     $("local-hint").hidden = !h.local;
@@ -706,3 +730,8 @@ setInterval(() => {
 }, 5000);
 
 if(/Android|iPhone|iPad/i.test(navigator.userAgent)){for(const link of document.querySelectorAll('a[href^="http://127.0.0.1"]')){link.removeAttribute('href');link.textContent='请在 Windows 电脑上完成助手设置';}}
+
+if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
+  $("guide-local").removeAttribute("href");
+  $("guide-local").textContent="请在电脑上完成此步骤";
+}

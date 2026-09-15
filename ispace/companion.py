@@ -109,6 +109,17 @@ class Companion:
         except ValueError as exc:
             return {'paired': False, 'message': str(exc), 'broken': True}
 
+    def migrate_plan(self):
+        if self.store.setting('website_plan') is not None:
+            return
+        with self.service.lock():
+            enabled = self.store.setting('schedule_enabled', False)
+            clock = self.store.setting('schedule_time', '20:00')
+            if enabled:
+                from .scheduler import configure
+                configure(self.store, False, clock)
+            self.store.set('website_plan', {'pending':True, 'enabled':enabled, 'time':clock})
+
     def snapshot(self, config):
         values = self.store.courses()
         with self.store.connect() as db:
@@ -119,12 +130,15 @@ class Companion:
                 row['status'] = 'missing'
             row['path'] = row['path'] or ''
         from . import __version__
-        return {'version': __version__, 'capabilities': ['archive-v1','setup-v1'], 'archive_status': self.store.setting('archive_status', {}), 'courses': [{'id': c['id'], 'name': c['name'], 'membership': c['membership'], 'sync_mode': c['sync_mode'], 'bound': bool(c['folder']), 'folder': c['folder'] or '', 'enabled': bool(c['enabled'])} for c in values],
+        return {'version': __version__, 'capabilities': ['archive-v1','setup-v1','cancel-v1','schedule-v1'], 'archive_status': self.store.setting('archive_status', {}), 'courses': [{'id': c['id'], 'name': c['name'], 'membership': c['membership'], 'sync_mode': c['sync_mode'], 'bound': bool(c['folder']), 'folder': c['folder'] or '', 'enabled': bool(c['enabled'])} for c in values],
                 'groups': [{'id': g['id'], 'course_id': g['course_id'], 'title': g['title'], 'folder': g['folder'], 'position': g['position']} for g in catalog.groups(self.store)],
-                'materials': rows, 'auth': self.store.setting('auth_state', 'not_logged_in'), 'paused': config.get('paused', False), 'local_schedule': self.store.setting('schedule_enabled', False), 'truncated': count > len(rows)}
+                'materials': rows, 'auth': self.store.setting('auth_state', 'not_logged_in'), 'paused': config.get('paused', False), 'local_schedule': self.store.setting('schedule_enabled', False), 'plan_migration':self.store.setting('website_plan', {}), 'truncated': count > len(rows)}
 
     def execute(self, job):
         kind, payload = job['kind'], job['payload']
+        if kind == 'schedule_resolve':
+            self.store.set('website_plan', {'pending':False, 'enabled':bool(payload['enabled']), 'time':payload['time']})
+            return {'status':'success','message':'每日计划已统一到官网'}
         if kind == 'refresh_courses':
             return self.service.execute('courses')
         if kind in {'add_courses', 'remove_courses', 'selection'}:
@@ -156,9 +170,11 @@ class Companion:
             finished = threading.Event()
 
             def renew():
-                while not finished.wait(25):
+                while not finished.wait(3):
                     try:
-                        self.request(config, f"/device/jobs/{job['id']}/heartbeat", {'lease_token': job['lease_token']})
+                        reply = self.request(config, f"/device/jobs/{job['id']}/heartbeat", {'lease_token': job['lease_token']})
+                        if reply.get('cancel_requested'):
+                            self.service.cancel()
                     except Exception:
                         pass  # Local receipt makes redelivery safe after a connection loss.
 
@@ -183,8 +199,15 @@ class Companion:
                 config = self.load()
                 if not config:
                     return
+                if not self.service.busy(): self.migrate_plan()
                 paused = config.get('paused', False) or self.service.busy()
                 reply = self.request(config, '/device/poll', {'snapshot': self.snapshot(config), 'paused': paused})
+                plan = reply.get('plan')
+                if plan and not plan.get('conflict'):
+                    self.store.set('website_plan', {'pending':False, 'enabled':plan['enabled'], 'time':plan['time']})
+                if not self.service.busy():
+                    for canceled in reply.get('cancellations', []):
+                        self.request(config, f"/device/jobs/{canceled['id']}/complete", {'lease_token':canceled['lease_token'], 'status':'canceled', 'result':{'message':'电脑已确认任务停止，已完成文件保留'}})
                 if reply.get('job') and not paused:
                     self.process(config, reply['job'])
                     # Report completion without claiming another job in this tick.

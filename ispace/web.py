@@ -29,6 +29,12 @@ class BindingBody(BaseModel):
     enabled: bool = True
 
 
+class FolderConfigBody(BaseModel):
+    folder: str = Field(default='', max_length=2000)
+    mode: str = Field(default='course', pattern='^(root|course|individual|check)$')
+    course_id: int | None = None
+    migrate: bool = False
+
 class ScheduleBody(BaseModel):
     enabled: bool
     time: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
@@ -141,6 +147,9 @@ def create_app(store=None, service=None):
             "auth_checked_at": store.setting("auth_checked_at"),
             "courses": courses.summaries(store), "operation": operation,
             "active_material": store.setting("active_material") if busy else None,
+            "website_plan": store.setting("website_plan"),
+            "folder_setup": store.setting("folder_setup", {}),
+            "folder_warning": store.setting("folder_warning", ""),
             "schedule": {"enabled": enabled, "time": schedule_time, "next": next_run(schedule_time) if enabled else None},
             "groups": catalog.groups(store),
             "organization_history": organize.history(store),
@@ -189,9 +198,23 @@ def create_app(store=None, service=None):
 
     @app.put("/api/schedule")
     def schedule(body: ScheduleBody):
+        if body.enabled and store.setting('website_plan') is not None:
+            raise ValueError("每日计划已统一到官网，请在官网设置")
         with service.lock():
             configure(store, body.enabled, body.time)
         return {"ok": True}
+
+    @app.post("/api/folders/configure")
+    def configure_folders(body: FolderConfigBody):
+        from . import folders
+        with service.lock():
+            if body.mode == 'check': return {'path':str(folders.check_path(store,body.folder)), 'message':'目录可用'}
+            if body.mode == 'individual':
+                store.set('folder_setup',{'mode':'individual'})
+                return {'ok':True}
+            if body.mode == 'root': return folders.configure_root(store,body.folder,body.migrate)
+            if body.course_id is None: raise ValueError('请选择课程')
+            return folders.configure(store,body.course_id,body.folder,body.migrate)
 
     @app.post("/api/folder")
     def choose_folder():

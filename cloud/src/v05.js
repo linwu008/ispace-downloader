@@ -146,7 +146,7 @@ export function createV05(h) {
         headers: {
           "Content-Type": "application/zip",
           "Content-Disposition":
-            'attachment; filename="CourseNestHelper-0.5.0-windows-x64.zip"',
+            'attachment; filename="CourseNestHelper-0.6.0-windows-x64.zip"',
         },
       });
     }
@@ -164,7 +164,7 @@ export function createV05(h) {
     }
     if (p === "/api/helper" && m === "GET")
       return json({
-        version: "0.5.0",
+        version: "0.6.0",
         url: env.HELPER_DOWNLOAD_URL || null,
         sha256: env.HELPER_SHA256 || null,
         platform: "Windows 10/11 x64",

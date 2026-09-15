@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+import threading
+from .cancellation import Cancelled, scope
 
 from filelock import FileLock, Timeout
 
@@ -16,6 +18,8 @@ class BusyError(Exception):
 
 class Service:
     def __init__(self, store, vault=None, platform_factory=Moodle, login=browser_login):
+        self.cancel_event = threading.Event()
+        self.active_platform = None
         self.store = store
         self.vault = vault or Vault(store.directory)
         self.platform_factory = platform_factory
@@ -31,6 +35,12 @@ class Service:
     def lock(self):
         return FileLock(self.store.directory / "operation.lock", timeout=0, thread_local=False)
 
+    def cancel(self):
+        self.cancel_event.set()
+        platform = self.active_platform
+        if platform and hasattr(platform, 'interrupt'):
+            platform.interrupt()
+
     def busy(self):
         try:
             with self.lock():
@@ -42,6 +52,7 @@ class Service:
         if self.store.setting("auth_blocked", False):
             raise LoginRequired("自动登录已暂停，请手动重新登录或更新密码")
         platform = self.platform_factory(self.vault.load_session())
+        self.active_platform = platform
         try:
             platform.check_login()
             self.store.set("auth_state", "logged_in")
@@ -60,6 +71,7 @@ class Service:
             self.store.set("auth_blocked", True)
             raise
         platform = self.platform_factory(self.vault.load_session())
+        self.active_platform = platform
         try:
             platform.check_login()
         except Exception:
@@ -74,6 +86,7 @@ class Service:
             lock.acquire()
         except Timeout:
             raise BusyError("已有任务正在进行，请等待完成") from None
+        self.cancel_event.clear()
         self.store.set("operation", {"name": operation, "status": "running", "started": now()})
         try:
             self.pool.submit(self._reserved, lock, operation, kwargs)
@@ -87,9 +100,21 @@ class Service:
             lock.acquire()
         except Timeout:
             raise BusyError("已有任务正在进行") from None
+        self.cancel_event.clear()
         return self._reserved(lock, operation, kwargs)
 
     def _reserved(self, lock, operation, kwargs):
+        try:
+            with scope(self.cancel_event):
+                return self._perform(lock, operation, kwargs)
+        except Cancelled:
+            result = {'status':'canceled','message':'任务已取消，已完成文件保留'}
+            self.store.set('operation', result)
+            return result
+        finally:
+            if lock.is_locked: lock.release()
+
+    def _perform(self, lock, operation, kwargs):
         run_id, platform = None, None
         self.store.set("operation", {"name": operation, "status": "running", "started": now()})
         try:
@@ -98,10 +123,12 @@ class Service:
                 result = prepare(self.store, kwargs["item_id"])
                 if result is None:
                     platform = self.authenticated()
+                    self.active_platform = platform
                     result = prepare(self.store, kwargs["item_id"], platform)
             elif operation == "catalog":
                 from .courses import discover
                 platform = self.authenticated()
+                self.active_platform = platform
                 result = discover(self.store, platform, kwargs["course_id"])
             elif operation == "organize":
                 from .organize import execute
@@ -121,6 +148,7 @@ class Service:
                 if operation in {"sync", "download"}:
                     run_id = self.store.start_run()
                 platform = self.authenticated()
+                self.active_platform = platform
                 self.store.set("auth_checked_at", now())
                 if operation == "courses":
                     courses = platform.courses()
@@ -135,7 +163,15 @@ class Service:
                     raise ValueError("未知操作")
             self.store.set("operation", {"name": operation, "finished": now(), **result})
             return result
+        except Cancelled:
+            if run_id:
+                self.store.finish(run_id, 'canceled', 0, 0, 0, '任务已取消，已完成文件保留')
+            raise
         except Exception as exc:
+            if self.cancel_event.is_set():
+                if run_id:
+                    self.store.finish(run_id, 'canceled', 0, 0, 0, '任务已取消，已完成文件保留')
+                raise Cancelled() from exc
             message = safe_error(exc)
             status = "auth_required" if isinstance(exc, LoginRequired) else "failed"
             if isinstance(exc, LoginRequired):
@@ -151,6 +187,8 @@ class Service:
             self.store.set("operation", result)
             return result
         finally:
+            self.active_platform = None
+            self.store.set("active_material", None)
             if platform:
                 platform.close()
             lock.release()

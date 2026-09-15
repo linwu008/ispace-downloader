@@ -15,6 +15,6 @@
       "migrations_dir": "migrations",
     },
   ],
-  "vars": { "HELPER_DOWNLOAD_URL": "https://github.com/linwu008/coursenest-releases/releases/download/v0.5/CourseNestHelper-0.5.0-windows-x64.zip", "HELPER_SHA256": "c5e0a62b7fa141a5a41419632451f68789530ade11104eb7a9c1ddec8af420df", "ARCHIVE_ENABLED": "0", "MAIL_ENABLED": "0", "PUBLIC_ORIGIN": "https://bnbucoursenest.cn", "INVITE_REQUIRED": "1", "QA_ENABLED": "0", "R2_WRITE_BUDGET": "800000", "R2_READ_BUDGET": "8000000", "USER_STORAGE_BYTES": "250000000", "GLOBAL_STORAGE_BYTES": "8000000000", "MAX_FILE_BYTES": "50000000", "AI_DAILY_NEURONS": "8000", "AI_MODEL": "@cf/qwen/qwen3-30b-a3b-fp8" },
+  "vars": { "HELPER_DOWNLOAD_URL": "https://github.com/linwu008/coursenest-releases/releases/download/v0.6/CourseNestHelper-0.6.0-windows-x64.zip", "HELPER_SHA256": "cb202e85fc4e41888b2a59b8f03258f3e68fa05d163d212442431bdf7bc023b7", "ARCHIVE_ENABLED": "0", "MAIL_ENABLED": "0", "PUBLIC_ORIGIN": "https://bnbucoursenest.cn", "INVITE_REQUIRED": "1", "QA_ENABLED": "0", "R2_WRITE_BUDGET": "800000", "R2_READ_BUDGET": "8000000", "USER_STORAGE_BYTES": "250000000", "GLOBAL_STORAGE_BYTES": "8000000000", "MAX_FILE_BYTES": "50000000", "AI_DAILY_NEURONS": "8000", "AI_MODEL": "@cf/qwen/qwen3-30b-a3b-fp8" },
   "triggers": { "crons": ["*/5 * * * *"] },
 }

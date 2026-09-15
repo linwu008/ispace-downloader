@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>BNBU CourseNest · 课巢</title>
     <link rel="stylesheet" href="/style.css" />
+    <script defer src="/demo.js"></script>
     <script defer src="/features.js"></script>
     <script defer src="/app.js"></script>
   </head>
@@ -19,7 +20,7 @@
       <div class="welcome-copy">
         <a class="brand" href="/"
           >◈ <span>BNBU <b>CourseNest</b></span></a
-        ><span class="edition">V0.5 · EARLY ACCESS</span>
+        ><span class="edition">V0.6 · EARLY ACCESS</span>
         <h1>每一份资料，<br />都有自己的位置。</h1>
         <p>
           在网站上选择课程，在电脑上自动归档。<br />从第一周到期末，把精力留给学习。
@@ -37,6 +38,7 @@
         <p class="disclaimer">学生独立开发 · 非学校官方网站</p>
       </div>
       <div class="auth-card">
+        <button id="guest-enter" class="secondary full">访客演示 · 无需注册</button>
         <div class="auth-tabs">
           <button id="login-tab" class="active">登录</button
           ><button id="register-tab">创建账号</button>
@@ -69,12 +71,16 @@
         </form>
         <p><a href="/account.html">忘记密码 / 验证邮箱</a> · <a href="/download.html">下载电脑助手</a></p>
         <p id="auth-note" role="status"></p>
+        <details><summary>第一次使用？查看注册与助手安装指南</summary>
+          <ol class="guide-steps"><li><b>注册官网账号</b><p>填写自己的邮箱、8–128 位密码和邀请码。官网密码与学校密码互相独立。邮件找回暂未启用，请妥善保存密码。</p></li><li><b>下载 Windows 助手</b><p>打开下载页，下载 ZIP 后完整解压，保留 _internal 文件夹，运行 CourseNestHelper.exe。不要在压缩包里直接运行。支持 Windows 10/11 x64，需要 Edge，无需 Python。</p><a href="/download.html">打开下载页</a></li><li><b>连接你的电脑</b><p>登录官网 → 我的设备 → 生成配对码。回到电脑设置输入配对码；配对码有时限，请使用当前官网生成的代码。</p></li><li><b>连接学校与设置目录</b><p>在电脑设置打开学校登录窗口。完成登录后刷新课程，选择统一总目录或逐课程设置，也可粘贴完整路径。首次检查后回官网选择课程文件。</p></li><li><b>开始同步</b><p>电脑开机联网且助手运行时执行任务。手机可下发任务，但不能运行 Windows 助手；浏览器关闭不影响助手运行。</p></li></ol>
+        </details>
         <p id="local-hint" class="hint" hidden>
           本机验收环境 · 邀请码 <strong>NEST-LOCAL-04</strong
           ><br />此账号仅用于本机首版体验，不是学校账号。
         </p>
       </div>
     </section>
+    <aside id="demo-banner" hidden>演示模式：数据为示例，所有操作均为模拟，不会执行真实任务。 <button id="demo-exit">退出演示</button></aside>
     <div id="feature-view" hidden></div>
     <div id="workspace" hidden>
       <aside id="sidebar">
@@ -90,7 +96,7 @@
         <div class="sidebar-footer">
           <strong id="account-label"></strong
           ><button id="logout" class="text-button">退出登录</button
-          ><small>v0.5 · 非学校官方网站</small>
+          ><small>v0.6 · 非学校官方网站</small>
         </div>
       </aside>
       <main>
@@ -103,7 +109,7 @@
             <div class="eyebrow">YOUR COURSES, TOGETHER.</div>
             <h1 id="page-title">总览</h1>
           </div>
-          <button id="sync-all" class="primary">立即同步</button>
+          <div class="buttons"><button id="setup-guide" class="primary">连接电脑 / 设置引导</button><button id="sync-all" class="secondary">立即同步</button></div>
         </div>
         <div id="notice" role="status" class="notice" hidden></div>
         <section data-page="overview">
@@ -218,7 +224,7 @@
                 ><input
                   id="schedule-enabled"
                   type="checkbox"
-                />启用网站每日计划</label
+                />启用每日自动同步</label
               ><label
                 >北京时间<input
                   id="schedule-time"
@@ -226,7 +232,7 @@
                   value="20:00"
                   required
               /></label>
-              <p id="local-schedule-note" class="hint"></p>
+              <p id="local-schedule-note" class="hint"></p><div id="plan-conflict" hidden><p>检测到两套不同时间的计划，请选择保留哪一个：</p><button type="button" id="keep-local">保留原电脑计划</button><button type="button" id="keep-site">保留官网计划</button></div>
               <button class="primary">保存计划</button>
             </form>
           </article>
@@ -303,5 +309,6 @@
       </div>
       <div class="dialog-body" id="location-body"></div>
     </dialog>
+    <dialog id="setup-dialog"><div class="dialog-head"><h2>连接电脑与设置引导</h2><button data-close="setup-dialog">关闭</button></div><div class="dialog-body"><ol class="guide-steps"><li><b>下载并运行助手</b><p>完整解压 ZIP 后运行 CourseNestHelper.exe，保留 _internal 文件夹。</p><a href="/download.html">下载 Windows 助手</a></li><li><b>在官网配对电脑</b><p>我的设备 → 生成配对码 → 输入电脑设置。学校账号只在电脑上登录。</p></li><li><b>选择文件保存位置</b><p>电脑设置顶部可选总目录或每课单独目录；支持浏览或粘贴路径。迁移时相同内容跳过，不同内容保留两份。</p><a id="guide-local" href="http://127.0.0.1:8765/" target="_blank" rel="noopener">打开电脑设置</a></li><li><b>官网统一管理计划</b><p>设置中开启每日同步，助手负责执行。电脑离线时任务等待上线，旧计划冲突时先选择保留哪一个。</p></li></ol><div id="demo-folder-controls" hidden><label>模拟保存位置<input id="demo-folder" value="D:\示例资料" /></label><button id="demo-folder-save">模拟保存文件夹</button><p id="demo-folder-note"></p></div></div></dialog>
   </body>
 </html>

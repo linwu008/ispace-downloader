@@ -86,7 +86,22 @@ class Store:
             for course in courses:
                 db.execute("INSERT INTO courses(id,name) VALUES (?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name", (course["id"], course["name"]))
 
-    def bind(self, course_id: int, folder: str, enabled: bool):
+        setup = self.setting('folder_setup', {})
+        if setup.get('mode') == 'root':
+            from .folders import check_path
+            from .sync import safe_name
+            try:
+                root = check_path(self, setup['path'])
+                self.set('folder_warning', '')
+                for course in self.courses():
+                    if not course['folder']:
+                        destination = root/(safe_name(course['name'])+'_'+str(course['id']))
+                        destination.mkdir(exist_ok=True)
+                        self.bind(course['id'], str(destination), True)
+            except (ValueError, OSError):
+                self.set('folder_warning', '默认目录不可用，请检查保存位置')
+
+    def validate_folder(self, course_id, folder):
         path = Path(folder).expanduser()
         if not path.is_absolute():
             raise ValueError("请选择绝对路径，例如 D:\\学习资料\\数学")
@@ -104,6 +119,10 @@ class Store:
                     raise ValueError("不同课程的目录不能相同或相互包含")
         if not path.is_dir():
             raise ValueError("目录不存在，请先在资源管理器中创建")
+        return path
+
+    def bind(self, course_id: int, folder: str, enabled: bool):
+        path = self.validate_folder(course_id, folder)
         with self.connect() as db:
             result = db.execute("UPDATE courses SET folder=?,enabled=?,membership='added' WHERE id=?", (str(path), int(enabled), course_id))
             if not result.rowcount:

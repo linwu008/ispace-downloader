@@ -123,6 +123,19 @@ class Moodle:
             cookies.set(cookie["name"], cookie["value"], domain=cookie.get("domain", ""), path=cookie.get("path", "/"))
         self.client = httpx.Client(cookies=cookies, transport=transport, trust_env=False, timeout=httpx.Timeout(60, connect=20), headers={"User-Agent": "iSpaceDownloader/0.2 (personal course backup)", "Accept-Encoding": "identity"})
 
+    def interrupt(self):
+        response = getattr(self, '_active_response', None)
+        if response is not None:
+            stream = response.extensions.get('network_stream')
+            try:
+                import socket
+                if stream:
+                    connection = stream.get_extra_info('socket')
+                    if connection: connection.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+        self.client.close()
+
     def close(self):
         self.client.close()
 
@@ -131,6 +144,8 @@ class Moodle:
         return target.scheme == base.scheme and target.netloc == base.netloc
 
     def request(self, method, url, **kwargs):
+        from .cancellation import check
+        check()
         url = urljoin(self.base + "/", url)
         for _ in range(8):
             if not self.allowed(url):
@@ -138,6 +153,8 @@ class Moodle:
             if "/login/" in urlsplit(url).path:
                 raise LoginRequired("登录状态已过期，请重新登录")
             response = self.client.send(self.client.build_request(method, url, **kwargs), stream=True)
+            self._active_response = response
+            check()
             if response.is_redirect:
                 location = response.headers.get("location")
                 response.close()
@@ -315,6 +332,8 @@ class Moodle:
             total, prefix = 0, b""
             with target.open("wb") as output:
                 for chunk in response.iter_bytes(128 * 1024):
+                    from .cancellation import check
+                    check()
                     prefix = (prefix + chunk)[:16384]
                     if max_bytes is not None and total + len(chunk) > max_bytes:
                         raise ResourceError("文件超过 50 MB，请下载后在本机打开")

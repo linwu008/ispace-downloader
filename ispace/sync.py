@@ -10,11 +10,16 @@ from pathlib import Path
 
 from .moodle import ResourceError, safe_error
 from .security import LoginRequired
+from .cancellation import check
 
 
 def digest(path):
     with Path(path).open("rb") as source:
-        return hashlib.file_digest(source, "sha256").hexdigest()
+        value = hashlib.sha256()
+        while chunk := source.read(1024 * 1024):
+            check()
+            value.update(chunk)
+        return value.hexdigest()
 
 
 def safe_name(name):
@@ -32,6 +37,7 @@ def scan(folder: Path):
     for current, directories, files in os.walk(folder, followlinks=False, onerror=lambda error: (_ for _ in ()).throw(error)):
         directories[:] = [name for name in directories if name not in {".git", ".ispace-temp"} and not (Path(current) / name).is_symlink() and not (hasattr(Path(current) / name, "is_junction") and (Path(current) / name).is_junction())]
         for name in files:
+            check()
             path = Path(current) / name
             if path.is_symlink() or name.endswith(".part"):
                 continue
@@ -64,6 +70,7 @@ class SyncEngine:
         if not courses:
             raise ResourceError("请先为至少一门课程绑定目录并启用同步")
         for course in courses:
+            check()
             try:
                 folder = Path(course["folder"]).resolve()
                 index = scan(folder)
@@ -75,6 +82,7 @@ class SyncEngine:
                     counts["failed"] += 1
                     self.store.event(run_id, course["id"], course["name"], "failed", error)
                 for resource in discovery.resources:
+                    check()
                     item = catalog.register(self.store, course["id"], resource)
                     seen.add(item["id"])
                     if (material_ids is not None and item["id"] not in material_ids) or (material_ids is None and course["sync_mode"] == "selected" and not item["selected"]):
@@ -83,6 +91,7 @@ class SyncEngine:
                     self.store.set("active_material", item["id"])
                     for attempt in range(4):  # Initial attempt plus at most three retries.
                         try:
+                            check()
                             status, message = self.one(course, resource, index)
                             counts[status] += 1
                             self.store.event(run_id, course["id"], resource.name, status, message, material_id=item["id"])
