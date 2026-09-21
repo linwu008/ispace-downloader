@@ -192,6 +192,8 @@ def execute(store, identifier, selected):
                     duplicate = db.execute("SELECT id FROM material_versions WHERE material_id=? AND path=? AND digest=? AND id<>?", (row["item_id"], str(target), row["digest"], row["version_id"])).fetchone()
                     if duplicate:
                         db.execute("DELETE FROM material_versions WHERE id=?", (duplicate["id"],))
+                    if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='local_archive_files'").fetchone():
+                        db.execute('UPDATE local_archive_files SET path=? WHERE path=? AND sha=?',(str(target),str(source),row['digest']))
                     db.execute("UPDATE material_versions SET path=? WHERE id=?", (str(target), row["version_id"]))
                     db.execute("UPDATE materials SET path=?,status='existing',error='' WHERE id=? AND path=? AND digest=?", (str(target), row["item_id"], str(source), row["digest"]))
             row.update(status="done", result="目标已校验，索引已更新")

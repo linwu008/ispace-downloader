@@ -20,6 +20,7 @@ class Service:
     def __init__(self, store, vault=None, platform_factory=Moodle, login=browser_login):
         self.cancel_event = threading.Event()
         self.active_platform = None
+        self.pending_content = {}
         self.store = store
         self.vault = vault or Vault(store.directory)
         self.platform_factory = platform_factory
@@ -190,5 +191,6 @@ class Service:
             self.active_platform = None
             self.store.set("active_material", None)
             if platform:
+                self.pending_content.update(getattr(platform, "course_content", {}))
                 platform.close()
             lock.release()

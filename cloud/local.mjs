@@ -18,6 +18,7 @@ export function localEnv(
   const db = new DatabaseSync(filename);
   db.exec(readFileSync(resolve(root, "migrations/0001_initial.sql"), "utf8"));
   db.exec(readFileSync(resolve(root, "migrations/0002_v05.sql"), "utf8"));
+  db.exec(readFileSync(resolve(root, "migrations/0003_v07.sql"), "utf8"));
   db.exec("PRAGMA journal_mode=WAL");
   const prepare = (sql) => ({
     sql,
@@ -111,7 +112,7 @@ export function localEnv(
           ".html": "text/html; charset=utf-8",
           ".js": "text/javascript; charset=utf-8",
           ".css": "text/css; charset=utf-8",
-          ".svg": "image/svg+xml",
+          ".svg": "image/svg+xml", ".png":"image/png", ".ico":"image/x-icon",
         };
         try {
           return new Response(readFileSync(filename), {

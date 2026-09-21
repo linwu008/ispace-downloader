@@ -1,11 +1,11 @@
 @charset "UTF-8";
 :root {
-  --ink: #243b35;
-  --muted: #72817a;
-  --green: #286a51;
-  --pale: #edf3e9;
-  --line: #dfe5dc;
-  --paper: #f6f7f2;
+  --ink: #183b47;
+  --muted: #627e88;
+  --green: #117f98;
+  --pale: #e7f5f8;
+  --line: #d5e7eb;
+  --paper: #f5fafb;
   --red: #b64339;
 }
 * {

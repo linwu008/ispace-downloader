@@ -1,5 +1,6 @@
 """Outbound-only CourseNest device connector; school secrets stay in the local Vault."""
 from __future__ import annotations
+from .cancellation import Cancelled
 
 import json
 import os
@@ -35,6 +36,9 @@ class Companion:
         self.stop_event = threading.Event()
         self.thread = None
         self.last_archive = 0
+        self.last_readiness = 0
+        self.readiness = {'at': 0, 'auth': False, 'busy': False, 'courses': [], 'reason': '正在检查电脑'}
+        self.pending = []
         with store.connect() as db:
             exists = db.execute("SELECT 1 FROM sqlite_master WHERE name='companion_receipts'").fetchone()
         backup = store.directory / 'index-pre-v0.4.sqlite3'
@@ -130,12 +134,19 @@ class Companion:
                 row['status'] = 'missing'
             row['path'] = row['path'] or ''
         from . import __version__
-        return {'version': __version__, 'capabilities': ['archive-v1','setup-v1','cancel-v1','schedule-v1'], 'archive_status': self.store.setting('archive_status', {}), 'courses': [{'id': c['id'], 'name': c['name'], 'membership': c['membership'], 'sync_mode': c['sync_mode'], 'bound': bool(c['folder']), 'folder': c['folder'] or '', 'enabled': bool(c['enabled'])} for c in values],
+        return {'version': __version__, 'readiness': {**self.readiness, 'busy': self.service.busy()}, 'capabilities': ['archive-v1','setup-v1','cancel-v1','schedule-v1','confirm-v1','local-archive-v1','notes-v1','update-v1'], 'archive_status': self.store.setting('archive_status', {}), 'courses': [{'id': c['id'], 'name': c['name'], 'membership': c['membership'], 'sync_mode': c['sync_mode'], 'bound': bool(c['folder']), 'folder': c['folder'] or '', 'enabled': bool(c['enabled'])} for c in values],
                 'groups': [{'id': g['id'], 'course_id': g['course_id'], 'title': g['title'], 'folder': g['folder'], 'position': g['position']} for g in catalog.groups(self.store)],
                 'materials': rows, 'auth': self.store.setting('auth_state', 'not_logged_in'), 'paused': config.get('paused', False), 'local_schedule': self.store.setting('schedule_enabled', False), 'plan_migration':self.store.setting('website_plan', {}), 'truncated': count > len(rows)}
 
     def execute(self, job):
         kind, payload = job['kind'], job['payload']
+        if kind == 'archive_export':
+            from .local_archive import export
+            from .cancellation import scope
+            with self.service.lock():
+                self.service.cancel_event.clear()
+                with scope(self.service.cancel_event):
+                    return export(self, self.load(), payload['archive_id'])
         if kind == 'schedule_resolve':
             self.store.set('website_plan', {'pending':False, 'enabled':bool(payload['enabled']), 'time':payload['time']})
             return {'status':'success','message':'每日计划已统一到官网'}
@@ -160,6 +171,33 @@ class Companion:
             return self.service.execute('sync', course_ids=course_ids)
         raise ValueError('网站下发的任务不受支持；未执行任何操作')
 
+    def check_readiness(self):
+        if time.monotonic()-self.last_readiness < 45 or self.service.busy():
+            return
+        import tempfile
+        self.last_readiness = time.monotonic()
+        ready = {'at': int(time.time()), 'auth': False, 'busy': False, 'courses': [], 'reason': ''}
+        try:
+            with self.service.lock():
+                platform = self.service.authenticated()
+                platform.close()
+                self.service.active_platform = None
+                ready['auth'] = True
+                for c in self.store.courses():
+                    if c['membership'] != 'added' or not c['folder']:
+                        continue
+                    try:
+                        path = self.store.validate_folder(c['id'], c['folder'])
+                        with tempfile.TemporaryFile(dir=path) as probe:
+                            probe.write(b'CourseNest'); probe.flush()
+                        ready['courses'].append(c['id'])
+                    except (OSError, ValueError):
+                        pass
+                if not ready['courses']: ready['reason'] = '请检查课程保存目录'
+        except Exception:
+            ready['reason'] = '请在电脑连接学校账号并检查网络'
+        self.readiness = ready
+
     def process(self, config, job):
         identifier = config['device_id'] + ':' + job['id']
         with self.store.connect() as db:
@@ -183,6 +221,8 @@ class Companion:
             try:
                 self.store.set('companion_status', {'message': '正在执行网站任务', 'at': now()})
                 result = self.execute(job)
+            except Cancelled:
+                result = {'status': 'canceled', 'message': '任务已取消，原文件保留'}
             except Exception as exc:
                 from .moodle import safe_error
                 result = {'status': 'failed', 'message': safe_error(exc)}
@@ -200,6 +240,7 @@ class Companion:
                 if not config:
                     return
                 if not self.service.busy(): self.migrate_plan()
+                self.check_readiness()
                 paused = config.get('paused', False) or self.service.busy()
                 reply = self.request(config, '/device/poll', {'snapshot': self.snapshot(config), 'paused': paused})
                 plan = reply.get('plan')
@@ -214,8 +255,13 @@ class Companion:
                     self.request(config, '/device/poll', {'snapshot': self.snapshot(config), 'paused': True})
                 if not paused and time.monotonic()-self.last_archive>60:
                     self.last_archive=time.monotonic()
-                    from .archive_upload import sync_archives
-                    sync_archives(self, config)
+                    from .local_archive import publish
+                    setting = self.request(config, '/v07/device/config', {})
+                    self.pending = setting.get('pending', [])
+                    publish(self, config, setting.get('term'))
+                else:
+                    setting = self.request(config, '/v07/device/config', {})
+                    self.pending = setting.get('pending', [])
                 self.store.set('companion_status', {'message': '已暂停接收网站任务' if config.get('paused') else '网站已连接，等待同步任务', 'at': now()})
         except Timeout:
             return
@@ -250,10 +296,61 @@ class PairBody(BaseModel):
 class PauseBody(BaseModel):
     paused: bool
 
+class DecisionBody(BaseModel):
+    ids: list[str] = Field(max_length=30)
+    action: str = Field(pattern='^(confirm|dismiss)$')
+
+class PreferenceBody(BaseModel):
+    enabled: bool
+
 
 def install_routes(app, store, service):
     companion = Companion(store, service)
     app.state.companion = companion
+    from .updater import Updater
+    updater = Updater(store, service)
+    app.state.updater = updater
+
+    @app.get('/api/updates')
+    def updates():
+        from . import __version__
+        return {**updater.state, 'current': __version__, 'automatic': store.setting('auto_update',False)}
+
+    @app.post('/api/updates/check')
+    def update_check():
+        return updater.check()
+
+    @app.post('/api/updates/install')
+    def update_install():
+        if service.busy(): raise ValueError('请等待当前任务结束后升级')
+        if not updater.meta: raise ValueError('请先检查更新')
+        def install():
+            try: updater.install()
+            except Exception: pass
+        threading.Thread(target=install,daemon=True).start()
+        return {'ok':True}
+
+    @app.put('/api/updates/automatic')
+    def auto_update(body: PreferenceBody):
+        store.set('auto_update',body.enabled)
+        return {'ok':True}
+
+    @app.get('/api/confirmations')
+    def confirmations():
+        return {'items':companion.pending,'enabled':store.setting('desktop_prompts',True)}
+
+    @app.put('/api/confirmations/enabled')
+    def desktop_prompts(body: PreferenceBody):
+        store.set('desktop_prompts',body.enabled)
+        return {'ok':True}
+
+    @app.post('/api/confirmations')
+    def decide(body: DecisionBody):
+        config=companion.load()
+        if not config: raise ValueError('请先配对官网')
+        result=companion.request(config,'/v07/device/confirm',body.model_dump())
+        companion.pending=[p for p in companion.pending if p['id'] not in body.ids]
+        return result
 
     @app.get('/api/companion')
     def status():

@@ -48,3 +48,15 @@ node("login").onclick=()=>act(async()=>{await call("/login/manual","POST");node(
 node("refresh").onclick=()=>act(async()=>{await call("/courses/refresh","POST");node("message").textContent="正在读取学校课程…";});
 node("disconnect").onclick=()=>act(async()=>{if(confirm("断开这台电脑与官网的连接？本地文件保留。")){await call("/companion/disconnect","POST");await refresh();}});
 act(refresh);setInterval(()=>{if(!document.hidden)act(refresh);},5000);
+
+node('update-check').onclick=()=>act(async()=>{await call('/updates/check','POST');await updatePanel();});
+node('update-install').onclick=()=>act(async()=>{await call('/updates/install','POST');node('update-state').textContent='正在准备更新，当前版本会保留。';});
+node('auto-update').onchange=()=>act(()=>call('/updates/automatic','PUT',{enabled:node('auto-update').checked}));
+node('desktop-prompts').onchange=()=>act(()=>call('/confirmations/enabled','PUT',{enabled:node('desktop-prompts').checked}));
+async function updatePanel(){
+ const u=await call('/updates');node('update-state').textContent='助手版本 '+u.current+' · '+u.message;node('update-install').disabled=u.status!=='available'||localState?.busy;node('auto-update').checked=u.automatic;
+ const p=await call('/confirmations');node('desktop-prompts').checked=p.enabled;node('pending-state').textContent=p.items.length?'待确认任务：'+p.items.length:'暂无待确认任务';node('pending-actions').replaceChildren();
+ const ready=p.items.filter(i=>i.ready);
+ if(ready.length){const b=document.createElement('button');b.textContent='确认开始执行';b.onclick=()=>act(async()=>{await call('/confirmations','POST',{ids:ready.map(j=>j.id),action:'confirm'});await updatePanel();});node('pending-actions').append(b);}
+}
+setInterval(()=>{if(token&&!document.hidden)act(updatePanel);},5000);

@@ -6,6 +6,7 @@ const $ = (id) => document.getElementById(id),
     if (cls) n.className = cls;
     return n;
   };
+const raw=(tag,value,cls)=>{const n=el(tag,value,cls);n.dataset.noTranslate='true';return n;};
 const names = {
   overview: "总览",
   courses: "我的课程",
@@ -14,6 +15,7 @@ const names = {
   settings: "设置",
 };
 const statuses = {
+  awaiting_confirmation: "待确认",
   queued: "等待设备执行",
   running: "正在执行",
   success: "已完成",
@@ -37,6 +39,7 @@ const kinds = {
   catalog: "更新资料清单",
   selection: "保存文件选择",
   sync: "同步学习资料",
+  archive_export: "导出学期存档",
 };
 let state = null,
   jobs = [],
@@ -127,11 +130,16 @@ let returnView = { hash: "#/overview", x: 0, y: 0 }, featureOpen = false;
 async function showFeature(name) {
   const host = $("feature-view");
   let view = featureViews.get(name);
-  for (const child of host.children) child.hidden = true;
-  if (view) { view.hidden = false; return; }
+  const reveal = () => {
+    if(location.hash.slice(2)!==name)return;
+    for(const child of host.children)child.hidden=child!==view;
+    $("workspace").hidden=true; $("welcome").hidden=true;host.hidden=false;view.hidden=false;
+  };
+  if (view) { if(view.dataset.ready)reveal(); return; }
   view = document.createElement("div");
-  featureViews.set(name, view); host.append(view);
+  view.hidden=true;featureViews.set(name, view); host.append(view);
   const root = view.attachShadow({mode: "open"});
+  const endTransition=window.CourseNestTransition.begin();
   try {
     const response = await fetch(featurePages[name]);
     if (!response.ok) throw Error("页面暂时无法打开");
@@ -139,13 +147,14 @@ async function showFeature(name) {
     const sheet = document.createElement("link"); sheet.rel = "stylesheet"; sheet.href = "/features.css";
     const content = document.createElement("div"); content.dataset.feature = name;
     content.append(document.importNode(html.querySelector("main"), true));
-    root.append(sheet, content);
+    const v7sheet=document.createElement("link");v7sheet.rel="stylesheet";v7sheet.href="/v07.css";root.append(sheet,v7sheet,content);
     await window.mountCourseNestFeature(root, featurePages[name]);
+    window.CourseNestI18n?.observe(root);
   } catch {
     featureViews.delete(name); root.replaceChildren();
     root.append(el("p", "页面暂时无法打开，请返回后重试。"));
     const back = el("a", "返回原来的页面"); back.href = "/"; root.append(back);
-  }
+  } finally {view.dataset.ready="true";reveal();endTransition();}
 }
 function navigateFeature(name) {
   if (!featureOpen) returnView = {hash:location.hash || "#/overview", x:scrollX, y:scrollY};
@@ -168,9 +177,8 @@ function route() {
   const page = location.hash.slice(2) || "overview";
   if (featurePages[page]) {
     featureOpen = true;
-    $("workspace").hidden = true; $("welcome").hidden = true;
-    $("feature-view").hidden = false;
-    if (!featureViews.has(page) || ![...$("feature-view").children].some(n => !n.hidden && n === featureViews.get(page))) showFeature(page);
+
+    showFeature(page);
     document.title = ({archives:"学期存档", download:"下载助手", account:"账号服务"})[page] + " · CourseNest";
     return;
   }
@@ -178,6 +186,7 @@ function route() {
   featureOpen = false; $("feature-view").hidden = true;
   $("workspace").hidden = !state;
   if ($("session-loading").hidden) $("welcome").hidden = !!state;
+  if(page === 'intro'){ $('workspace').hidden=true; $('welcome').hidden=false; return; }
   const chosen = names[page] ? page : "overview";
   document
     .querySelectorAll("[data-page]")
@@ -255,7 +264,7 @@ function renderCourses() {
     card.dataset.courseId = c.id;
     card.append(
       el("span", "▤", "eyebrow"),
-      el("h3", c.name),
+      raw("h3", c.name),
       el(
         "small",
         `${groups().filter((g) => g.course_id === c.id).length} 个分组 · ${files().filter((f) => f.course_id === c.id && ["downloaded", "existing", "skipped"].includes(f.status)).length} 份已保存`,
@@ -290,17 +299,19 @@ function renderDevice() {
   const d = state.device;
   if (d && !d.snapshot?.capabilities?.includes("cancel-v1")) {
     const upgrade = el("p", "助手有新版可用；原有同步仍可使用。 ");
-    const link = el("a", "下载 v0.6 助手"); link.href = "/download.html";
+    const link = el("a", "下载新版助手"); link.href = "/download.html";
     upgrade.append(link); box.append(upgrade);
   }
+  if(d && !d.snapshot?.capabilities?.includes('notes-v1'))box.append(el('p','课程文字与本地学期存档需要首次升级到 v0.7 助手；已有同步仍可继续。以后官网更新不要求同步升级助手。'));
   $("new-pair").disabled = !!d;
   if (d) {
     const row = el("div", undefined, "device-name"),
       copy = el("div");
     copy.append(
-      el("strong", d.name),
+      raw("strong", d.name),
       el("p", `${d.online ? "在线" : "离线"} · 最近连接 ${time(d.last_seen)}`),
     );
+    copy.append(el("p", "官网版本 "+state.version+" · 助手版本 "+(d.snapshot?.version||"未知")));
     row.append(copy);
     const remove = el("button", "解除配对", "secondary");
     remove.onclick = async () => {
@@ -339,7 +350,9 @@ function renderJobs() {
       el(
         "p",
         job.result.message ||
-          (job.status === "queued"
+          (job.status === "awaiting_confirmation"
+            ? "电脑准备好后，请在待确认任务中开始执行。"
+            : job.status === "queued"
             ? "等待同步助手领取，尚未执行。"
             : job.status === "running"
               ? "电脑正在处理，请稍候。"
@@ -355,14 +368,14 @@ function renderJobs() {
         "pill " + (job.status === "failed" ? "failed" : ""),
       ),
     );
-    if (["queued", "running"].includes(job.status)) {
+    if (["queued", "running", "awaiting_confirmation"].includes(job.status)) {
       const cancel = el("button", "取消任务", "text-button");
       cancel.onclick = async () => {cancel.disabled=true;try {await api("/jobs/"+job.id+"/cancel", "POST", {});await refresh();}catch(e){fail(e);}finally{cancel.disabled=false;}};
       copy.append(cancel);
     }
     if (job.kind !== "schedule_resolve" && ["failed", "partial", "auth_required"].includes(job.status)) {
       const retry = el("button", "重新执行", "text-button");
-      retry.onclick = () => queue(job.kind, job.payload).catch(fail);
+      retry.onclick = () => (job.kind==='archive_export' ? api('/v07/archives/'+job.payload.archive_id+'/export','POST',{request_id:crypto.randomUUID()}).then(refresh) : queue(job.kind, job.payload)).catch(fail);
       copy.append(retry);
     }
     box.append(row);
@@ -430,6 +443,7 @@ async function refresh() {
       $("keep-local").textContent = "保留原电脑计划（"+migration.time+"）";
       $("keep-site").textContent = "保留官网计划（"+d.schedule.time+"）";
     }
+    window.CourseNestV07.refresh(state).catch(e=>notice(e.message,true));
     renderDevice();
     renderJobs();
     const snapshotKey = JSON.stringify(s);
@@ -496,7 +510,7 @@ function renderAvailable() {
       check.checked
         ? availableSelected.add(c.id)
         : availableSelected.delete(c.id);
-    row.append(check, el("span", c.name));
+    row.append(check, raw("span", c.name));
     box.append(row);
   }
   if (!box.children.length)
@@ -553,7 +567,7 @@ function openCourse(id) {
   $("course-mode").value = mode;
   $("file-search").value = "";
   $("course-note").textContent = c.bound
-    ? "文件保存到配对电脑的授权目录。内容预览和目录修改在本地助手中进行。"
+    ? "文件保存到配对电脑的授权目录；请在电脑文件夹打开原文件。目录修改在电脑设置中完成。"
     : "可以浏览和选择资料；正式同步前，请在本地助手为该课程授权目录。";
   renderGroups();
   $("course-dialog").showModal();
@@ -578,7 +592,7 @@ function renderGroups() {
     const details = el("details", undefined, "group");
     details.dataset.group = g.id;
     details.open = !!q || opened.has(g.id) || opened.size === 0;
-    details.append(el("summary", `${g.title} · ${members.length} 份`));
+    details.append(raw("summary", `${g.title} · ${members.length}`));
     const tools = el("div", undefined, "group-tools");
     for (const [label, choose] of [
       ["选择本组", true],
@@ -607,7 +621,7 @@ function renderGroups() {
         check.checked ? draft.add(f.id) : draft.delete(f.id);
         persist();
       };
-      label.append(check, el("span", f.name));
+      label.append(check, raw("span", f.name));
       const location = el("button", "查看位置", "text-button");
       location.onclick = () => showLocation(f, g);
       row.append(
@@ -650,7 +664,10 @@ async function saveChoice(sync = false) {
     sessionStorage.removeItem(key());
     dirty = false;
     $("selection-count").textContent = "选择已提交，等待助手应用";
-    if (sync) await queue("sync", { course_id: current });
+    if (sync) {
+      await queue("sync", { course_id: current });
+      if(snapshot().capabilities?.includes("confirm-v1")){ $("course-dialog").close(); await window.CourseNestV07.refresh(state); }
+    }
   } catch (e) {
     fail(e);
   } finally {
@@ -674,7 +691,7 @@ function showLocation(f, g) {
   const box = $("location-body");
   box.replaceChildren();
   box.append(
-    el("h3", f.name),
+    raw("h3", f.name),
     el(
       "p",
       courses().find((c) => c.id === f.course_id)?.name + " / " + g.title,
@@ -735,3 +752,6 @@ if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
   $("guide-local").removeAttribute("href");
   $("guide-local").textContent="请在电脑上完成此步骤";
 }
+
+$('copy-wechat').onclick=()=>navigator.clipboard.writeText('guaottttt').then(()=>notice('微信号已复制')).catch(()=>notice('请手动复制微信号'));
+const notesButton=el('button','课程通知与要求','secondary'); notesButton.onclick=()=>window.CourseNestV07.courseNotes(current).catch(fail);$('read-catalog').after(notesButton);

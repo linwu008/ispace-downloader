@@ -31,6 +31,8 @@ def configure(store, course_id, folder, migrate=False):
     if migrate and old:
         with store.connect() as db:
             paths = {r[0] for r in db.execute('SELECT path FROM materials WHERE course_id=? UNION SELECT path FROM resources WHERE course_id=? UNION SELECT v.path FROM material_versions v JOIN materials m ON m.id=v.material_id WHERE m.course_id=?', (course_id,course_id,course_id)) if r[0]}
+            if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='local_archive_files'").fetchone():
+                paths.update(r[0] for r in db.execute('SELECT path FROM local_archive_files WHERE root=?',(str(old),)))
         for original in sorted(paths):
             source = Path(original)
             if not source.is_file(): continue
@@ -52,7 +54,9 @@ def configure(store, course_id, folder, migrate=False):
             else: raise ValueError('同名文件过多，原文件保留')
             mappings.append((original,str(destination),value))
     with store.connect() as db:
+        archived = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='local_archive_files'").fetchone()
         for source,destination,_ in mappings:
+            if archived: db.execute('UPDATE local_archive_files SET path=?,root=? WHERE path=? AND root=?',(destination,str(target),source,str(old)))
             db.execute('UPDATE materials SET path=? WHERE course_id=? AND path=?',(destination,course_id,source))
             db.execute('UPDATE resources SET path=? WHERE course_id=? AND path=?',(destination,course_id,source))
             db.execute('UPDATE OR REPLACE material_versions SET path=? WHERE material_id IN (SELECT id FROM materials WHERE course_id=?) AND path=?',(destination,course_id,source))

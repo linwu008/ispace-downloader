@@ -1,0 +1,163 @@
+:root {
+  --ink: #183b47;
+  --muted: #627e88;
+  --green: #117f98;
+  --pale: #e7f5f8;
+  --line: #d5e7eb;
+  --paper: #f5fafb;
+}
+.brand img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  margin-right: 10px;
+}
+.welcome {
+  grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr);
+  align-items: start;
+}
+.welcome-copy {
+  grid-column: 1;
+}
+.auth-card {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  position: sticky;
+  top: 30px;
+}
+.home-explainer {
+  grid-column: 1;
+  padding: 24px 0;
+  max-width: 680px;
+}
+.home-explainer h2 {
+  font-size: 30px;
+  line-height: 1.35;
+  margin-top: 40px;
+}
+.home-steps {
+  display: grid;
+  gap: 12px;
+}
+.home-steps article,
+.v07-card {
+  background: white;
+  border: 1px solid var(--line, #d5e7eb);
+  border-radius: 16px;
+  padding: 24px;
+  margin: 16px 0;
+}
+.home-steps b {
+  color: #117f98;
+}
+.v07-card input,
+.v07-card select {
+  max-width: 100%;
+  padding: 10px;
+  border: 1px solid #aecdd5;
+  border-radius: 8px;
+  margin: 4px;
+}
+.v07-card button,
+.v07-dialog button {
+  padding: 10px 16px;
+  margin: 6px;
+  border: 1px solid #aacbd4;
+  border-radius: 8px;
+  background: #edf8fb;
+  color: #165c70;
+}
+.v07-dialog {
+  width: min(850px, 94vw);
+  max-height: 85vh;
+  overflow: auto;
+  padding: 28px;
+  border: 1px solid #b7d3db;
+  border-radius: 20px;
+  color: #183b47;
+  background: #f5fafb;
+}
+.v07-dialog::backdrop {
+  background: #123b4966;
+}
+.v07-dialog details {
+  border-top: 1px solid #d5e7eb;
+  padding: 16px 0;
+}
+.course-note,
+.v07-dialog pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+}
+.v07-dialog small {
+  display: block;
+  color: #627e88;
+}
+#pending-button {
+  margin-left: 12px;
+}
+#language-switch {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 100;
+  padding: 8px 14px;
+  border-radius: 22px;
+  background: white;
+  border: 1px solid #afd0d8;
+  color: #15536a;
+}
+#route-loading {
+  position: fixed;
+  inset: 0;
+  background: #f5fafbf2;
+  z-index: 90;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+#route-loading[hidden] {
+  display: none;
+}
+#route-loading img {
+  height: 70px;
+  margin: auto;
+}
+.session-loading {
+  visibility: hidden;
+}
+.session-loading.slow {
+  visibility: visible;
+}
+@media (max-width: 850px) {
+  .welcome {
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    gap: 20px;
+  }
+  .auth-card {
+    position: static;
+    width: 100%;
+  }
+  .home-explainer {
+    order: 3;
+  }
+  .home-explainer h2 {
+    font-size: 24px;
+  }
+  .v07-dialog {
+    padding: 16px;
+  }
+}
+
+main {
+  padding-bottom: 80px;
+}
+
+.school-content-link {
+  display: block;
+  overflow-wrap: anywhere;
+  margin: 8px 0;
+}

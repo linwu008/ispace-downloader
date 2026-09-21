@@ -4,14 +4,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>BNBU CourseNest · 课巢</title>
-    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/style.css" /><link rel="stylesheet" href="/v07.css" /><link rel="icon" href="/logo.png" />
     <script defer src="/demo.js"></script>
     <script defer src="/features.js"></script>
+    <script defer src="/transitions.js"></script><script defer src="/v07.js"></script>
     <script defer src="/app.js"></script>
-  </head>
+  <script defer src="/i18n.js"></script></head>
   <body>
     <section id="session-loading" class="session-loading" aria-label="打开学习空间">
-      <span class="brand">◈ BNBU CourseNest</span>
+      <span class="brand">BNBU CourseNest</span>
       <p id="session-status" role="status">正在打开学习空间…</p>
       <button id="session-retry" class="primary" hidden>重新连接</button>
     </section>
@@ -19,8 +20,8 @@
     <section id="welcome" class="welcome" hidden>
       <div class="welcome-copy">
         <a class="brand" href="/"
-          >◈ <span>BNBU <b>CourseNest</b></span></a
-        ><span class="edition">V0.6 · EARLY ACCESS</span>
+          ><img src="/logo.png" alt="" /> <span>BNBU <b>CourseNest</b></span></a
+        ><span class="edition">V0.7 · EARLY ACCESS</span>
         <h1>每一份资料，<br />都有自己的位置。</h1>
         <p>
           在网站上选择课程，在电脑上自动归档。<br />从第一周到期末，把精力留给学习。
@@ -33,11 +34,11 @@
           <span>▧ 你的学习空间</span>
           <div>01 Week 1 — Introduction <i>已归档</i></div>
           <div>02 Week 2 — Practice <i>已归档</i></div>
-          <small>本地同步，按需开启云端学期存档。</small>
+          <small>资料保存在电脑，课程通知与学期清单在网站查看。</small>
         </div>
         <p class="disclaimer">学生独立开发 · 非学校官方网站</p>
       </div>
-      <div class="auth-card">
+      <div class="home-explainer"><h2>从课堂到期末，资料都有归处。</h2><p>课巢帮助 BNBU 学生整理 iSpace 文件、查看课程通知和作业要求，留下属于自己的学期记录。</p><div class="home-steps"><article><b>01 连接电脑</b><p>注册官网账号，下载助手，连接学校账号并设置保存目录。</p></article><article><b>02 选择资料</b><p>按课程与 Week 浏览。手机可提交任务，电脑准备好后确认执行。</p></article><article><b>03 留住学期</b><p>文件保存在电脑，通知与要求保留在网站；需要时导出完整备份。</p></article></div><h2>少一点整理，多一点学习。</h2><p>学校密码留在电脑。每份资料默认仅本人可见。电脑离线时可查看已同步的课程文字，下载等待电脑上线。</p><a href="/download.html">下载 Windows 助手</a><h3>建议与问题</h3><p>微信：<span>guaottttt</span> <button id="copy-wechat" type="button">复制微信</button></p><a href="mailto:2738026702@qq.com">2738026702@qq.com</a></div><div class="auth-card">
         <button id="guest-enter" class="secondary full">访客演示 · 无需注册</button>
         <div class="auth-tabs">
           <button id="login-tab" class="active">登录</button
@@ -85,10 +86,10 @@
     <div id="workspace" hidden>
       <aside id="sidebar">
         <a class="brand" href="#/overview"
-          >◈ <span>BNBU <b>CourseNest</b></span></a
+          ><img src="/logo.png" alt="" /> <span>BNBU <b>CourseNest</b></span></a
         ><button id="mobile-menu" class="secondary">菜单</button>
         <div class="nav-caption">我的学习空间</div>
-        <nav><a href="/archives.html">▧　学期存档</a><a href="/download.html">↓　下载助手</a>
+        <nav><a href="#/intro" id="intro-link">关于课巢</a><a href="/archives.html">▧　学期存档</a><a href="/download.html">↓　下载助手</a>
           <a href="#/overview">◉　总览</a><a href="#/courses">▦　我的课程</a
           ><a href="#/devices">▣　我的设备</a><a href="#/history">↻　任务记录</a
           ><a href="#/settings">⚙　设置</a>
@@ -96,7 +97,7 @@
         <div class="sidebar-footer">
           <strong id="account-label"></strong
           ><button id="logout" class="text-button">退出登录</button
-          ><small>v0.6 · 非学校官方网站</small>
+          ><small>官网 v0.7 · 非学校官方网站</small>
         </div>
       </aside>
       <main>
@@ -239,7 +240,7 @@
           <article class="panel settings-panel">
             <h2>账号与文件</h2>
             <p>
-              网站保存课程清单、文件选择和任务状态。文件内容与学校密码保留在配对电脑，解除配对会撤销设备授权并清除网站上的设备清单。
+              网站保存课程文字、存档索引、文件选择和任务状态。原附件与学校密码保留在电脑。解除配对撤销设备授权，但已建立的学期存档仍保留。
             </p>
             <p class="hint">
               账号通过邀请码注册；验证邮箱与找回密码请打开账号服务。

@@ -60,6 +60,7 @@ class Resource:
 class Discovery:
     resources: list[Resource] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    notes: list[dict] = field(default_factory=list)
 
 
 def browser_login(vault, username=None, password=None, manual=False):
@@ -233,6 +234,7 @@ class Moodle:
 
     def discover(self, course_id):
         result = Discovery()
+        if not hasattr(self, "course_content"): self.course_content = {}
         seen_files, seen_pages, teachers = set(), set(), set()
         try:
             info_url, info_html = self.page(f"/course/info.php?id={course_id}")
@@ -266,6 +268,8 @@ class Moodle:
                     raise ResourceError("未识别课程内容区域，需适配页面")
                 for navigation in content.select(".activity-navigation, .activity-navigation-container, .nextprev, nav, [data-region=activity-navigation]"):
                     navigation.decompose()
+                from .course_content import extract
+                result.notes.extend(extract(html, actual_url, inherited.title, teachers))
                 path = urlsplit(actual_url).path
                 is_forum = "/mod/forum/" in path
                 discovered_here = 0
@@ -295,7 +299,7 @@ class Moodle:
                     if not self.allowed(target):
                         continue
                     query = parse_qs(parts.query)
-                    supported = parts.path in {"/mod/resource/view.php", "/mod/folder/view.php", "/mod/forum/view.php", "/mod/forum/discuss.php", "/mod/assign/view.php", "/mod/page/view.php"}
+                    supported = parts.path in {"/mod/resource/view.php", "/mod/folder/view.php", "/mod/forum/view.php", "/mod/forum/discuss.php", "/mod/assign/view.php", "/mod/page/view.php", "/mod/url/view.php", "/mod/attendance/view.php", "/mod/groupselect/view.php", "/mod/choicegroup/view.php"}
                     if supported and not any(k in query for k in ("action", "sesskey", "edit", "delete", "submit")):
                         if (canonical(target), group.key) not in seen_pages:
                             queue.append((target, group))
@@ -310,6 +314,7 @@ class Moodle:
                 raise
             except (ResourceError, httpx.HTTPError) as exc:
                 result.errors.append(f"页面读取失败（{urlsplit(url).path}）：{safe_error(exc)}")
+        self.course_content[course_id] = list({n["source_key"]:n for n in result.notes}.values())
         result.errors = list(dict.fromkeys(result.errors))
         return result
 

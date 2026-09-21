@@ -31,6 +31,12 @@ def main():
     from filelock import Timeout
     from ispace.web import create_app
     from ispace import __version__
+    from ispace.updater import preferred_executable
+    candidate = preferred_executable(os.environ['ISPACE_DATA_DIR'], __version__)
+    if getattr(sys, 'frozen', False) and candidate:
+        import subprocess
+        subprocess.Popen([str(candidate)], creationflags=subprocess.CREATE_NO_WINDOW)
+        return
     url = 'http://127.0.0.1:8765'
     def open_ui(icon=None, item=None):
         try:
@@ -64,11 +70,15 @@ def main():
         alert('同步助手启动超时。')
         server.should_exit = True
         return
-    picture = Image.new('RGB', (64,64), '#205b4c')
+    picture = Image.new('RGB', (64,64), '#159ab5')
     draw = ImageDraw.Draw(picture)
     draw.rounded_rectangle((12,18,52,49), radius=5, outline='#e5ecd8', width=4)
     draw.line((20,29,44,29), fill='#e5ecd8', width=3)
     draw.line((20,38,38,38), fill='#e5ecd8', width=3)
+    try:
+        import ispace
+        picture = Image.open(Path(ispace.__file__).parent / 'static' / 'logo.png').convert('RGBA').resize((64,64))
+    except OSError: pass
     def autorun_enabled(item=None):
         import winreg
         try:
@@ -96,13 +106,32 @@ def main():
                 icon.stop()
         except Timeout:
             alert('仍有任务正在执行，请等待完成后退出，以保证文件完整。')
-    tray = pystray.Icon('BNBUCourseNest', picture, 'BNBU CourseNest · v0.6', pystray.Menu(
+    tray = pystray.Icon('BNBUCourseNest', picture, 'BNBU CourseNest · v'+__version__, pystray.Menu(
         pystray.MenuItem('打开官网', open_ui, default=True),
         pystray.MenuItem('电脑设置', lambda icon,item:webbrowser.open(url+'/')),
         pystray.MenuItem('Windows 登录后启动', toggle_autorun, checked=autorun_enabled),
         pystray.MenuItem('退出同步助手', quit_app)))
     if os.environ.get('COURSENEST_NO_BROWSER') != '1':
         open_ui()
+    def shutdown_update():
+        app.state.companion.stop()
+        server.should_exit = True
+        tray.stop()
+    app.state.updater.shutdown = shutdown_update
+    app.state.updater.companion = app.state.companion
+    threading.Thread(target=app.state.updater.loop, args=(app.state.companion.stop_event,), daemon=True).start()
+    def notify_pending():
+        store = app.state.companion.store
+        seen = set(store.setting('notified_jobs', []))
+        while not app.state.companion.stop_event.wait(5):
+            if not store.setting('desktop_prompts', True):
+                continue
+            pending = [p for p in app.state.companion.pending if p['ready'] and not p['dismissed'] and p['id'] not in seen]
+            if pending:
+                seen.update(p['id'] for p in pending)
+                store.set('notified_jobs', sorted(seen)[-500:])
+                tray.notify('电脑已准备好。打开官网或电脑设置确认任务；可在助手设置关闭电脑提示。', 'CourseNest')
+    threading.Thread(target=notify_pending, daemon=True).start()
     try:
         tray.run()
     finally:

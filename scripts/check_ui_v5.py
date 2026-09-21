@@ -36,22 +36,22 @@ try:
         context=browser.new_context(viewport={'width':1280,'height':900})
         context.add_cookies([{'name':'cn_session','value':client.cookies['cn_session'],'url':origin}])
         page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
-        page.goto(origin+'/archives.html');page.locator('#semester').fill('2026 Fall');expect(page.locator('#course option')).to_have_count(1)
-        page.get_by_role('button',name='创建档案').click();expect(page.locator('#archives')).to_contain_text('2026 Fall')
-        archive=client.get('/api/archives').json()[0]['id'];data=b'Course concepts: functions and variables.'
-        upload=client.post('/api/device/archive/prepare',headers=headers,json={'archive_id':archive,'source_key':'fixture','name':'lecture.txt','group_name':'Week 1','bytes':len(data),'sha':hashlib.sha256(data).hexdigest()}).json()['upload_id']
-        client.put('/api/device/archive/upload/'+upload,headers=headers,content=data).raise_for_status()
-        client.post('/api/device/archive/commit',headers=headers,json={'upload_id':upload,'parts':[{'locator':'正文','text':data.decode()}]}).raise_for_status()
-        page.get_by_role('button',name='查看存档').click();expect(page.locator('#detail')).to_contain_text('lecture.txt')
-        page.get_by_role('button',name='创建登录后可访问的链接').click();expect(page.locator('#detail input[readonly]')).to_be_visible()
+        # The single archive UI now uses the storage-independent local index.
+        # Existing R2 upload/share behavior remains covered by cloud/test/v05.test.mjs.
+        term=client.post('/api/v07/terms',json={'label':'2026 Fall'}).json()
+        response=client.post('/api/v07/device/index',headers=headers,json={'term_id':term['id'],'course_id':1,'files':[{'source_key':'fixture','name':'lecture.txt','group_name':'Week 1','bytes':10,'sha':'a'*64,'available':True}],'notes':[]})
+        response.raise_for_status()
+        page.goto(origin+'/archives.html');expect(page.locator('p').filter(has_text='2026 Fall')).to_be_visible()
+        page.get_by_role('button',name='查看内容',exact=True).click();expect(page.locator('.v07-dialog')).to_contain_text('lecture.txt')
+        page.locator('.v07-dialog button').first.click()
         root.joinpath('.runtime').mkdir(exist_ok=True);page.screenshot(path=str(root/'.runtime/v05-archives.png'),full_page=True)
         page.goto(origin+'/account.html');expect(page.locator('#forgot')).to_be_hidden();expect(page.locator('#message')).to_contain_text('邮件服务暂未启用')
         page.goto(origin+'/download.html');expect(page.locator('#download')).to_contain_text('暂未开放下载')
         mobile=browser.new_context(user_agent='iPhone',viewport={'width':390,'height':844});mp=mobile.new_page();mp.goto(origin+'/download.html');expect(mp.locator('#local-link')).not_to_have_attribute('href','http://127.0.0.1:8765/')
         page.route('**/api/features',lambda route:route.fulfill(json={'archive_enabled':False,'mail_enabled':False,'qa_enabled':False}))
-        page.goto(origin+'/archives.html');expect(page.locator('#create')).to_be_hidden();expect(page.locator('#message')).to_contain_text('暂未启用')
+        page.goto(origin+'/archives.html');expect(page.get_by_role('heading',name='学期存档',exact=True)).to_be_visible();expect(page.get_by_text('原文件尚不支持云端下载和分享。',exact=False)).to_be_visible()
         # Hold session restoration to expose any first-frame login flash.
-        for source,label in [('archives.html','学习空间'),('download.html','CourseNest 官网')]:
+        for source,label in [('archives.html','返回官网'),('download.html','CourseNest 官网')]:
             page.goto(origin+'/'+source)
             pending=[]
             page.route('**/api/me',lambda route:pending.append(route))
@@ -74,7 +74,7 @@ try:
         page.locator('#schedule-time').fill('19:42')
         page.evaluate("window.returnNavigationMarker = 'same-document'; window.scrollTo(0, 250)")
         original_scroll=page.evaluate('scrollY')
-        for path,label in [('/archives.html','学习空间'),('/download.html','CourseNest 官网')]:
+        for path,label in [('/archives.html','返回官网'),('/download.html','CourseNest 官网')]:
             page.locator('#sidebar a[href="'+path+'"]').click()
             expect(page.locator('#feature-view')).to_be_visible()
             expect(page.locator('#workspace')).to_be_hidden()
@@ -94,6 +94,6 @@ try:
         guest=browser.new_context();gp=guest.new_page();gp.goto(origin+'/');expect(gp.locator('#welcome')).to_be_visible();expect(gp.locator('#session-loading')).to_be_hidden()
         assert not errors,errors
         browser.close()
-    print('PASS v0.5 browser: archive creation/upload/display/share, account page, public download status, mobile setup guidance.')
+    print('PASS v0.5 browser: retained archive display, account page, same-document navigation, public download status, mobile setup guidance.')
 finally:
     process.terminate();process.wait(timeout=10);log.close()

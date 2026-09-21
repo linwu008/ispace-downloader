@@ -1,6 +1,8 @@
+import {ensureStudySchema} from "./study_schema.js";
 import { advanceKnowledge } from "./knowledge.js";
+import { createV07 } from "./v07.js";
 import { createV05 } from "./v05.js";
-const VERSION = "0.6.0";
+const VERSION = "0.7.0";
 const enc = new TextEncoder();
 const hex = (b) =>
   Array.from(new Uint8Array(b), (n) => n.toString(16).padStart(2, "0")).join(
@@ -199,11 +201,12 @@ function sanitizeSnapshot(b) {
   return {
     version: text(b.version, 30),
     capabilities: Array.isArray(b.capabilities)
-      ? b.capabilities.filter((x) => ["archive-v1", "setup-v1", "cancel-v1", "schedule-v1"].includes(x))
+      ? b.capabilities.filter((x) => ["archive-v1", "setup-v1", "cancel-v1", "schedule-v1", "confirm-v1", "local-archive-v1", "notes-v1", "update-v1"].includes(x))
       : [],
     courses,
     groups,
     materials,
+    readiness: b.readiness ? {at:Number(b.readiness.at)||0,auth:!!b.readiness.auth,busy:!!b.readiness.busy,courses:Array.isArray(b.readiness.courses)?b.readiness.courses.filter(id=>ids.has(id)):[],reason:text(b.readiness.reason,300)} : null,
     auth: text(b.auth, 40),
     paused: !!b.paused,
     local_schedule: !!b.local_schedule,
@@ -268,6 +271,7 @@ function validateCommand(kind, p, snapshot) {
   throw Object.assign(new Error("不支持此任务"), { status: 400 });
 }
 async function enqueue(env, d, kind, p, key) {
+  if(kind === "archive_export" || JSON.parse(d.snapshot).capabilities?.includes("confirm-v1"))await ensureStudySchema(env);
   const existing = await first(
     env,
     "SELECT id FROM jobs WHERE request_key=?",
@@ -278,7 +282,7 @@ async function enqueue(env, d, kind, p, key) {
     (
       await first(
         env,
-        "SELECT COUNT(*) AS n FROM jobs WHERE device_id=? AND status IN ('queued','running','canceling')",
+        "SELECT COUNT(*) AS n FROM jobs WHERE device_id=? AND status IN ('queued','running','canceling','awaiting_confirmation')",
         d.id,
       )
     ).n < 30,
@@ -288,7 +292,7 @@ async function enqueue(env, d, kind, p, key) {
   const id = crypto.randomUUID();
   await run(
     env,
-    "INSERT OR IGNORE INTO jobs(id,user_id,device_id,kind,payload,created,updated,request_key) VALUES (?,?,?,?,?,?,?,?)",
+    "INSERT OR IGNORE INTO jobs(id,user_id,device_id,kind,payload,created,updated,request_key,status) VALUES (?,?,?,?,?,?,?,?,?)",
     id,
     d.user_id,
     d.id,
@@ -297,7 +301,10 @@ async function enqueue(env, d, kind, p, key) {
     now(),
     now(),
     key,
+    ((kind === "sync" && !key.startsWith("daily:") && JSON.parse(d.snapshot).capabilities?.includes("confirm-v1")) || kind === "archive_export") ? "awaiting_confirmation" : "queued",
   );
+  const inserted=await first(env,"SELECT id,status FROM jobs WHERE request_key=?",key);
+  if(inserted.status==="awaiting_confirmation") await run(env,"INSERT OR IGNORE INTO job_confirmations(job_id) VALUES (?)",inserted.id);
   return (await first(env, "SELECT id FROM jobs WHERE request_key=?", key)).id;
 }
 async function due(env, d) {
@@ -338,7 +345,9 @@ const v05 = createV05({
   throttle,
   passwordHash,
 });
+const v07=createV07({first,all,run,body,json,check,random,sha,now,session,deviceAuth,throttle,enqueue});
 async function api(request, env, url) {
+  const newer=await v07.route(request,env,url); if(newer)return newer;
   const added = await v05.route(request, env, url);
   if (added) return added;
   const path = url.pathname,
@@ -447,6 +456,11 @@ async function api(request, env, url) {
     const d = await deviceAuth(request, env),
       b = await body(request);
     if (path === "/api/device/poll") {
+      if(env.MIN_HELPER_VERSION){
+        const parse=v=>/^\d+\.\d+\.\d+$/.test(v||'')?v.split('.').map(Number):null;
+        const installed=parse(b.snapshot?.version||JSON.parse(d.snapshot).version),minimum=parse(env.MIN_HELPER_VERSION);
+        if(minimum){const supported=installed&&installed.some((v,i)=>v>minimum[i]&&installed.slice(0,i).every((n,j)=>n===minimum[j]))||installed?.every((v,i)=>v===minimum[i]);check(supported,env.HELPER_UPDATE_REASON||'当前助手存在安全或兼容性问题，请升级助手后继续执行任务',426);}
+      }
       if (b.snapshot) {
         const snapshot = sanitizeSnapshot(b.snapshot);
         await run(
@@ -488,11 +502,12 @@ async function api(request, env, url) {
       const lease = random(16);
       const job = await first(
         env,
-        "UPDATE jobs SET status='running',attempts=attempts+1,lease_until=?,lease_token=?,updated=? WHERE id=(SELECT id FROM jobs WHERE device_id=? AND status='queued' ORDER BY created,rowid LIMIT 1) AND NOT EXISTS (SELECT 1 FROM jobs WHERE device_id=? AND status IN ('running','canceling')) RETURNING id,kind,payload,lease_token",
+        "UPDATE jobs SET status='running',attempts=attempts+1,lease_until=?,lease_token=?,updated=? WHERE id=(SELECT id FROM jobs WHERE device_id=? AND status='queued' AND (kind<>'archive_export' OR json_extract(?,'$.capabilities') LIKE '%local-archive-v1%') ORDER BY created,rowid LIMIT 1) AND NOT EXISTS (SELECT 1 FROM jobs WHERE device_id=? AND status IN ('running','canceling')) RETURNING id,kind,payload,lease_token",
         now() + 120,
         lease,
         now(),
         d.id,
+        d.snapshot,
         d.id,
       );
       return json({
@@ -588,7 +603,7 @@ async function api(request, env, url) {
           "UPDATE devices SET revoked=1,snapshot='{}' WHERE id=?",
         ).bind(d.id),
         env.DB.prepare(
-          "UPDATE jobs SET status='canceled' WHERE device_id=? AND status IN ('queued','running','canceling')",
+          "UPDATE jobs SET status='canceled' WHERE device_id=? AND status IN ('queued','running','canceling','awaiting_confirmation')",
         ).bind(d.id),
       ]);
     await run(env, "UPDATE pairings SET used=1 WHERE user_id=?", user.id);
@@ -600,8 +615,8 @@ async function api(request, env, url) {
     check(job, "任务不存在", 404);
     const canInterrupt = JSON.parse(d?.snapshot || "{}").capabilities?.includes("cancel-v1");
     if (job.status === "running") check(canInterrupt, "请先升级电脑助手至 v0.6 后取消运行中任务", 409);
-    await run(env, "UPDATE jobs SET status=CASE WHEN status='queued' THEN 'canceled' ELSE 'canceling' END,result=?,updated=? WHERE id=? AND user_id=? AND (status='queued' OR (status='running' AND ?=1))",
-      JSON.stringify({message: job.status === "queued" ? "待执行任务已取消" : "取消请求已提交，等待电脑确认停止"}),now(),job.id,user.id,canInterrupt ? 1 : 0);
+    await run(env, "UPDATE jobs SET status=CASE WHEN status IN ('queued','awaiting_confirmation') THEN 'canceled' ELSE 'canceling' END,result=?,updated=? WHERE id=? AND user_id=? AND (status IN ('queued','awaiting_confirmation') OR (status='running' AND ?=1))",
+      JSON.stringify({message: ["queued", "awaiting_confirmation"].includes(job.status) ? "待执行任务已取消" : "取消请求已提交，等待电脑确认停止"}),now(),job.id,user.id,canInterrupt ? 1 : 0);
     return json({ok:true});
   }
   if (path === "/api/jobs" && method === "GET") {

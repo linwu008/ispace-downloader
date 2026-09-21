@@ -24,10 +24,13 @@ try:
                 if process.poll() is not None:raise RuntimeError('Frozen assistant exited before startup')
                 time.sleep(.4)
         else:raise RuntimeError('Frozen assistant did not start')
-        assert state['version']=='0.6.0' and not state['busy']
+        assert state['version']=='0.7.0' and not state['busy']
         assert 'id="pair"' in client.get('/').text
         assert not client.get('/api/companion').json()['paired']
         assert client.get('/static/companion.js').status_code==200
+        assert client.get('/static/logo.png').headers['content-type'].startswith('image/')
+        assert client.get('/static/en.json').json()['我的课程'] == 'My courses'
+        assert client.get('/api/updates').status_code==200
         assert client.post('/api/companion/disconnect').status_code==403
         assert (fixture/'index-pre-v0.4.sqlite3').is_file()
         print('PASS frozen Windows EXE: isolated database, static UI, companion API, CSRF, backup and scheduled-task argument compatibility.')

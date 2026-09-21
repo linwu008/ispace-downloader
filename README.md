@@ -1,27 +1,25 @@
-## v0.5 发布范围
+# BNBU CourseNest · v0.7
 
-日常使用 https://bnbucoursenest.cn 。Windows 助手公开下载：https://github.com/linwu008/coursenest-releases/releases/tag/v0.5 。原源码仓库保持私有。
+官网统一管理课程，Windows 助手负责连接 iSpace 和保存文件。正式网站：https://bnbucoursenest.cn 。网站和助手当前均为 `0.7.0`，此后独立更新；源码仓库保持私有。
 
-本次不开通 R2：学期存档、分享、知识总结及未配置的邮件恢复暂未开放，页面明确提示。保留现有数据库和同步流程。后续启用步骤见 docs/V0.5-DEPLOYMENT.md。
+本版增加课程通知与作业要求、本人出勤/分组的文字提取，私有学期清单与电脑 ZIP 导出，手机下单后电脑就绪确认，中英界面、归巢标识及签名校验升级。原附件仍保存在电脑，网站存档清单不代表云端备份。
 
-> v0.5 已按上方范围上线；存档与邮件功能保留待启用。部署配置见 [v0.5 部署说明](docs/V0.5-DEPLOYMENT.md)。
-
-# BNBU CourseNest · v0.5
-
-独立产品网站 + Windows 本地同步助手。正式网站：https://bnbucoursenest.cn 。当前版本 `0.5.0`，发布标签 `v0.5`；保留 v0.1、v0.2、v0.3。
+不激活 R2，不新增付费服务；云端原文件、分享、AI 总结和邮件恢复继续关闭。功能边界及验证说明见 [v0.7 发布说明](docs/V0.7-RELEASE.md)。
 
 网站负责产品账号、设备配对、课程选择和任务；学校密码与文件留在各自电脑。注册需要邀请码。下载 Windows 助手后解压整个目录，运行 `CourseNestHelper.exe`，在助手中登录学校、绑定课程目录，再使用正式网站生成的配对码连接。网站地址与生成配对码的网站必须一致。
 
-- [Windows 助手下载与发布记录](https://github.com/linwu008/coursenest-releases/releases/tag/v0.5)（公开下载，无需源码仓库权限）
+- [Windows 助手下载与发布记录](https://github.com/linwu008/coursenest-releases/releases/tag/v0.7)（公开下载，无需源码仓库权限）
 - [Windows 独立助手说明](docs/WINDOWS-ASSISTANT.md)
 - [Cloudflare 部署说明](docs/CLOUDFLARE-V0.4.md)
 - [v0.4 验证记录](docs/V0.4-TRIAL.md)
 
-独立助手用户无需安装 Python 或 Node.js，需要 Windows 10/11 x64 与 Microsoft Edge。电脑需开机联网并运行助手才能同步。本版未提供自动更新，升级前退出旧助手，再完整替换程序目录；用户数据保存在独立数据目录。
+独立助手用户无需安装 Python 或 Node.js，需要 Windows 10/11 x64 与 Microsoft Edge。电脑需开机联网并运行助手才能同步。旧助手首次升级 v0.7 时需退出旧版并完整解压新版；配对和目录设置保持。v0.7 起支持自动检查、一键升级和可选空闲自动安装。
 
 开发者仍可通过 `start-v04.cmd` 启动本地网站 http://127.0.0.1:8787 ，本地测试邀请码 `NEST-LOCAL-04` 仅用于本机。构建助手需 `requirements-build.lock` 中的依赖，运行 `scripts/build_assistant.ps1`，产物位于 `dist/`。
 
-## 本地助手使用（沿用 v0.3）
+## 历史本地工作台说明（v0.3，供开发与回归参考）
+
+以下记录描述旧版完整本地工作台。当前日常使用官网，电脑页面仅保留登录、目录、配对和运行设置；每日计划在官网统一配置。当前使用流程以 [Windows 助手说明](docs/WINDOWS-ASSISTANT.md) 为准。
 
 1. 首次安装双击 `setup.cmd`；已有 v0.2 环境直接双击 `start.cmd`，打开 http://127.0.0.1:8765/ 。无需新增软件或重新配置账号。
 2. 左侧导航切换 **总览、我的课程、资料库、任务记录、设置**。刷新保留当前页面，支持浏览器前进／后退；手机点击“菜单”。
