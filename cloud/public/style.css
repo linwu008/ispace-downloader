@@ -813,4 +813,6 @@ dialog::backdrop {
 }
 .session-loading p { color: var(--muted); }
 
-#demo-banner { position:sticky; top:0; z-index:20; background:#fff0b6; color:#533c08; padding:12px 24px; text-align:center; font-weight:600; } .guide-steps { padding-left:24px; } .guide-steps li { padding:12px; margin:8px 0; border-left:3px solid var(--green); background:var(--pale); } #setup-dialog { max-width:760px; } #setup-guide { box-shadow:0 0 0 3px #cfe1c6; }
+#demo-banner { position:sticky; top:0; bottom:auto; z-index:20; width:auto; margin-left:238px; display:block; border:0; background:#fff0b6; color:#533c08; padding:12px 24px; text-align:center; font-weight:600; }
+@media (max-width: 760px) { #demo-banner { margin-left:0; } }
+.guide-steps { padding-left:24px; } .guide-steps li { padding:12px; margin:8px 0; border-left:3px solid var(--green); background:var(--pale); } #setup-dialog { max-width:760px; } #setup-guide { box-shadow:0 0 0 3px #cfe1c6; }
