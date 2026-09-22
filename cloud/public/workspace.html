@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BNBU CourseNest · 课巢</title>
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/v07.css" />
+    <link rel="icon" href="/logo.png" />
+    <script defer src="/demo.js"></script>
+    <script defer src="/features.js"></script>
+    <script defer src="/transitions.js"></script>
+    <script defer src="/v07.js"></script>
+    <script defer src="/app.js"></script>
+    <script defer src="/i18n.js"></script>
+  </head>
+  <body>
+    <section
+      id="session-loading"
+      class="session-loading"
+      aria-label="打开学习空间"
+    >
+      <span class="brand">BNBU CourseNest</span>
+      <p id="session-status" role="status">正在打开学习空间…</p>
+      <button id="session-retry" class="primary" hidden>重新连接</button>
+    </section>
+    <noscript>请启用 JavaScript 后打开学习空间。</noscript>
+    <aside id="demo-banner" hidden>
+      演示模式：数据为示例，所有操作均为模拟，不会执行真实任务。
+      <button id="demo-exit">退出演示</button>
+    </aside>
+    <div id="feature-view" hidden></div>
+    <div id="workspace" hidden>
+      <aside id="sidebar">
+        <a class="brand" href="#/overview"
+          ><img src="/logo.png" alt="" /> <span>BNBU <b>CourseNest</b></span></a
+        ><button id="mobile-menu" class="secondary">菜单</button>
+        <div class="nav-caption">我的学习空间</div>
+        <nav>
+          <a href="/" id="intro-link">关于课巢</a
+          ><a href="/archives.html">▧　学期存档</a
+          ><a href="/download.html">↓　下载助手</a>
+          <a href="#/overview">◉　总览</a><a href="#/courses">▦　我的课程</a
+          ><a href="#/devices">▣　我的设备</a><a href="#/history">↻　任务记录</a
+          ><a href="#/settings">⚙　设置</a>
+        </nav>
+        <div class="sidebar-footer">
+          <strong id="account-label"></strong
+          ><button id="logout" class="text-button">退出登录</button
+          ><small>官网 v0.7 · 非学校官方网站</small>
+        </div>
+      </aside>
+      <main>
+        <header>
+          <span id="breadcrumb">工作空间 / 总览</span
+          ><span id="connection" class="pill">等待设备</span>
+        </header>
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow">YOUR COURSES, TOGETHER.</div>
+            <h1 id="page-title">总览</h1>
+          </div>
+          <div class="buttons">
+            <button id="setup-guide" class="primary">连接电脑 / 设置引导</button
+            ><button id="sync-all" class="secondary">立即同步</button>
+          </div>
+        </div>
+        <div id="notice" role="status" class="notice" hidden></div>
+        <section data-page="overview">
+          <div class="metrics">
+            <article>
+              <span>我的课程</span><strong id="metric-courses">0</strong
+              ><small>每门课，独立整理</small>
+            </article>
+            <article>
+              <span>本地已保存</span><strong id="metric-files">0</strong
+              ><small>来自同步助手最近上报</small>
+            </article>
+            <article>
+              <span>等待 / 进行中</span><strong id="metric-jobs">0</strong
+              ><small>离线任务恢复后执行</small>
+            </article>
+            <article>
+              <span>网站每日计划</span><strong id="metric-time">未开启</strong
+              ><small>北京时间 · 每日补查一次</small>
+            </article>
+          </div>
+          <div class="overview-grid">
+            <article class="panel next-step">
+              <span class="eyebrow">从一台电脑开始</span>
+              <h2 id="next-title">连接你的学习电脑</h2>
+              <p id="next-copy">
+                配对同步助手后，课程与本地保存状态会出现在这里。
+              </p>
+              <a class="primary" href="#/devices">管理我的设备 →</a>
+            </article>
+            <article class="panel">
+              <h2>这周的资料，井井有条</h2>
+              <p>
+                勾选需要的文件，助手会按课程与 Week
+                自动保存。相同内容不重复下载，更新版本继续保留。
+              </p>
+              <a class="text-button" href="#/courses">查看我的课程 →</a>
+            </article>
+          </div>
+        </section>
+        <section data-page="courses" hidden>
+          <div class="panel">
+            <div class="section-head">
+              <div>
+                <h2>我的课程</h2>
+                <p>点击课程卡片，按 Week 选择要同步的文件。</p>
+              </div>
+              <div class="buttons">
+                <button id="refresh-courses" class="secondary">
+                  刷新学校列表</button
+                ><button id="add-courses" class="primary">添加课程</button>
+              </div>
+            </div>
+            <div id="course-grid" class="course-grid"></div>
+          </div>
+        </section>
+        <section data-page="devices" hidden>
+          <article class="panel device-panel">
+            <div class="section-head">
+              <div>
+                <h2>我的 Windows 电脑</h2>
+                <p>
+                  首版每个账号绑定一台电脑。学校密码保存在该电脑的凭据管理器中。
+                </p>
+              </div>
+            </div>
+            <div id="device-detail"></div>
+            <div class="steps">
+              <div>
+                <b>01</b><strong>启动同步助手</strong>
+                <p>
+                  <a href="/download.html">下载 Windows 助手</a>，完整解压后运行
+                  CourseNestHelper.exe。
+                </p>
+                <a
+                  href="http://127.0.0.1:8765/#/settings"
+                  target="_blank"
+                  rel="noopener"
+                  >打开这台电脑的设置 ↗</a
+                >
+              </div>
+              <div>
+                <b>02</b><strong>生成配对码</strong>
+                <p>在电脑设置中输入配对码；新版助手已内置官网地址。</p>
+                <button id="new-pair" class="secondary">生成配对码</button>
+                <div id="pair-code" role="status"></div>
+              </div>
+              <div>
+                <b>03</b><strong>连接学校与授权目录</strong>
+                <p>
+                  在电脑设置连接学校账号、选择课程目录，之后回到官网管理同步。
+                </p>
+              </div>
+            </div>
+          </article>
+        </section>
+        <section data-page="history" hidden>
+          <article class="panel">
+            <div class="section-head">
+              <div>
+                <h2>网站任务记录</h2>
+                <p>等待中不代表已完成；文件下载详情保留在本地助手。</p>
+              </div>
+              <span class="muted">最近 100 条</span>
+            </div>
+            <div id="job-list"></div>
+          </article>
+        </section>
+        <section data-page="settings" hidden>
+          <article class="panel settings-panel">
+            <h2>每日自动同步</h2>
+            <p>电脑离线时保留任务，恢复后补查。同步助手需要保持运行。</p>
+            <form id="schedule-form">
+              <label class="check"
+                ><input
+                  id="schedule-enabled"
+                  type="checkbox"
+                />启用每日自动同步</label
+              ><label
+                >北京时间<input
+                  id="schedule-time"
+                  type="time"
+                  value="20:00"
+                  required
+              /></label>
+              <p id="local-schedule-note" class="hint"></p>
+              <div id="plan-conflict" hidden>
+                <p>检测到两套不同时间的计划，请选择保留哪一个：</p>
+                <button type="button" id="keep-local">保留原电脑计划</button
+                ><button type="button" id="keep-site">保留官网计划</button>
+              </div>
+              <button class="primary">保存计划</button>
+            </form>
+          </article>
+          <article class="panel settings-panel">
+            <h2>账号与文件</h2>
+            <p>
+              网站保存课程文字、存档索引、文件选择和任务状态。原附件与学校密码保留在电脑。解除配对撤销设备授权，但已建立的学期存档仍保留。
+            </p>
+            <p class="hint">
+              账号通过邀请码注册；验证邮箱与找回密码请打开账号服务。
+            </p>
+          </article>
+        </section>
+        <footer>
+          BNBU CourseNest · 为学习腾出一点空间<span id="snapshot-at"></span>
+        </footer>
+      </main>
+    </div>
+    <dialog id="course-dialog">
+      <div class="dialog-head">
+        <div>
+          <span class="eyebrow">COURSE FILES</span>
+          <h2 id="course-title"></h2>
+        </div>
+        <button data-close="course-dialog" class="secondary">关闭</button>
+      </div>
+      <div class="dialog-body">
+        <div class="course-tools">
+          <input id="file-search" placeholder="搜索文件名或 Week" /><button
+            id="read-catalog"
+            class="secondary"
+          >
+            更新资料清单
+          </button>
+        </div>
+        <p id="course-note" class="hint"></p>
+        <label
+          >同步范围<select id="course-mode">
+            <option value="selected">仅同步所选文件</option>
+            <option value="all">整门课自动下载</option>
+          </select></label
+        >
+        <div id="group-list"></div>
+        <button id="remove-course" class="danger text-button">
+          移出我的课程（保留本地文件）
+        </button>
+      </div>
+      <div class="dialog-footer">
+        <span id="selection-count"></span>
+        <div class="buttons">
+          <button id="save-choice" class="secondary">保存选择</button
+          ><button id="download-choice" class="primary">保存并同步</button>
+        </div>
+      </div>
+    </dialog>
+    <dialog id="add-dialog">
+      <div class="dialog-head">
+        <h2>添加课程</h2>
+        <button data-close="add-dialog" class="secondary">关闭</button>
+      </div>
+      <div class="dialog-body">
+        <input id="course-search" placeholder="搜索学校课程" />
+        <div id="available-courses"></div>
+      </div>
+      <div class="dialog-footer">
+        <span>新课程默认只同步所选文件</span
+        ><button id="confirm-add" class="primary">添加所选课程</button>
+      </div>
+    </dialog>
+    <dialog id="location-dialog">
+      <div class="dialog-head">
+        <h2>本地文件位置</h2>
+        <button data-close="location-dialog" class="secondary">关闭</button>
+      </div>
+      <div class="dialog-body" id="location-body"></div>
+    </dialog>
+    <dialog id="setup-dialog">
+      <div class="dialog-head">
+        <h2>连接电脑与设置引导</h2>
+        <button data-close="setup-dialog">关闭</button>
+      </div>
+      <div class="dialog-body">
+        <ol class="guide-steps">
+          <li>
+            <b>下载并运行助手</b>
+            <p>
+              完整解压 ZIP 后运行 CourseNestHelper.exe，保留 _internal 文件夹。
+            </p>
+            <a href="/download.html">下载 Windows 助手</a>
+          </li>
+          <li>
+            <b>在官网配对电脑</b>
+            <p>
+              我的设备 → 生成配对码 → 输入电脑设置。学校账号只在电脑上登录。
+            </p>
+          </li>
+          <li>
+            <b>选择文件保存位置</b>
+            <p>
+              电脑设置顶部可选总目录或每课单独目录；支持浏览或粘贴路径。迁移时相同内容跳过，不同内容保留两份。
+            </p>
+            <a
+              id="guide-local"
+              href="http://127.0.0.1:8765/"
+              target="_blank"
+              rel="noopener"
+              >打开电脑设置</a
+            >
+          </li>
+          <li>
+            <b>官网统一管理计划</b>
+            <p>
+              设置中开启每日同步，助手负责执行。电脑离线时任务等待上线，旧计划冲突时先选择保留哪一个。
+            </p>
+          </li>
+        </ol>
+        <div id="demo-folder-controls" hidden>
+          <label
+            >模拟保存位置<input id="demo-folder" value="D:\示例资料" /></label
+          ><button id="demo-folder-save">模拟保存文件夹</button>
+          <p id="demo-folder-note"></p>
+        </div>
+      </div>
+    </dialog>
+  </body>
+</html>

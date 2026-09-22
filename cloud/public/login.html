@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>登录 · CourseNest</title>
+    <link rel="icon" href="/logo.png" />
+    <link rel="stylesheet" href="/public-site.css" />
+    <script src="/public-route.js"></script>
+    <script defer src="/demo.js"></script>
+    <script defer src="/public-site.js"></script>
+    <script defer src="/i18n.js"></script>
+  </head>
+  <body class="auth-page">
+    <header class="auth-header">
+      <a class="wordmark" href="/"
+        ><img src="/logo.png" alt="归巢燕子" /><span
+          >CourseNest<small>BNBU · 课巢</small></span
+        ></a
+      ><a class="back-home" href="/">← 返回产品首页</a>
+    </header>
+    <main class="auth-layout">
+      <section class="auth-story">
+        <span class="eyebrow">A PLACE FOR YOUR SEMESTER</span>
+        <h1>欢迎归巢。</h1>
+        <p>从课堂到期末，<br />让每一份努力，都有迹可循。</p>
+        <div class="nest-scene">
+          <div class="nest-ring ring-one"></div>
+          <div class="nest-ring ring-two"></div>
+          <div class="nest-ring ring-three"></div>
+          <img src="/logo.png" alt="燕子归巢" />
+          <div class="nest-word">YOUR COURSES, TOGETHER.</div>
+        </div>
+        <div class="auth-story-foot">
+          <span>01 — 12</span>
+          <p>一周一周，积累自己的学期。<br />你的资料，留在自己的电脑里。</p>
+        </div>
+      </section>
+      <section class="auth-form-side">
+        <div id="auth-loading" role="status">
+          <p id="session-status">正在连接学习空间…</p>
+          <button id="session-retry" type="button" hidden>重新连接</button>
+        </div>
+        <div class="auth-form-wrap" hidden>
+          <div class="auth-tabs" role="tablist" aria-label="账号入口">
+            <button
+              role="tab"
+              aria-selected="true"
+              id="login-tab"
+              data-auth="login"
+            >
+              登录</button
+            ><button
+              role="tab"
+              aria-selected="false"
+              id="register-tab"
+              data-auth="register"
+            >
+              创建账号
+            </button>
+          </div>
+          <div class="auth-title">
+            <span class="eyebrow">YOUR LEARNING SPACE</span>
+            <h2 id="auth-title">回到你的学习空间</h2>
+            <p id="auth-subtitle">登录课巢，继续上一次的学习。</p>
+          </div>
+          <form id="auth-form">
+            <label
+              >邮箱地址<input
+                id="email"
+                name="email"
+                type="email"
+                maxlength="254"
+                placeholder="name@example.com"
+                autocomplete="username"
+                required /></label
+            ><label
+              ><span class="password-label"
+                >密码 <a href="/account.html">忘记密码？</a></span
+              ><span class="password-field"
+                ><input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="输入至少 8 位密码"
+                  minlength="8"
+                  maxlength="128"
+                  autocomplete="current-password"
+                  required /><button
+                  type="button"
+                  id="toggle-password"
+                  aria-label="显示密码"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                  >
+                    <path
+                      d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"
+                    />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg></button></span></label
+            ><label id="invite-field" hidden
+              >邀请码<input
+                id="invite"
+                name="invite"
+                placeholder="输入收到的体验邀请码" /></label
+            ><button
+              id="auth-submit"
+              class="button dark auth-submit"
+              type="submit"
+            >
+              <span id="submit-text">登录学习空间</span><span>↗</span>
+            </button>
+            <p id="auth-note" role="status"></p>
+            <p id="local-hint" hidden>本机验收环境 · 邀请码 NEST-LOCAL-04</p>
+          </form>
+          <div class="auth-divider"><span>第一次使用课巢？</span></div>
+          <button class="guide-card" data-modal="guide">
+            <span class="guide-icon">↗</span
+            ><span
+              ><b>从注册到同步，一起走一遍</b
+              ><small>注册账号 · 下载助手 · 连接电脑</small></span
+            ><span>→</span></button
+          ><button id="guest-enter" type="button" class="guest-link">
+            先了解一下？查看访客体验 <span>↗</span>
+          </button>
+          <div class="auth-footnote">
+            <span class="small-lock">◇</span>
+            课巢账号与学校账号独立，学校登录在电脑助手中完成。
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer class="auth-bottom">
+      <span>© 2026 BNBU CourseNest · 非学校官方网站</span>
+      <div>
+        <button data-modal="help">帮助与反馈</button><span>/</span
+        ><button id="language-switch" type="button" data-no-translate="true">
+          English
+        </button>
+      </div>
+    </footer>
+
+    <dialog id="info-dialog">
+      <button class="dialog-close" aria-label="关闭弹窗">×</button
+      ><span class="eyebrow">COURSENEST · SUPPORT</span>
+      <h2 id="dialog-title"></h2>
+      <div id="dialog-content"></div>
+      <button class="button dark dialog-done">知道了</button>
+    </dialog>
+    <div id="toast" role="status" hidden></div>
+    <noscript
+      >请启用 JavaScript 以登录和使用学习空间。<a href="/download.html"
+        >下载助手</a
+      ></noscript
+    >
+  </body>
+</html>

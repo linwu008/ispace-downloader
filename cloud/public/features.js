@@ -64,7 +64,7 @@ async function initialize() {
     return;
   }
   if(feature === 'archives' && window.CourseNestV07 && !window.CourseNestDemo?.enabled()) {
-    try {state=await api('/me');csrf=state.csrf;const main=root.querySelector('main');const back=make('a','返回官网');back.href='/';await window.CourseNestV07.archiveView(main,state);main.prepend(back);}catch(e){const target=$('message')||root.querySelector('main');target.textContent=e.message;}return;
+    try {state=await api('/me');csrf=state.csrf;const main=root.querySelector('main');const back=make('a','返回官网');back.href='/workspace.html';await window.CourseNestV07.archiveView(main,state);main.prepend(back);}catch(e){const target=$('message')||root.querySelector('main');target.textContent=e.message;}return;
   }
   const availability = await api("/features");
   if (feature === "archives" && !availability.archive_enabled) {

@@ -50,7 +50,7 @@ try:
         except BrowserError:browser = engine.chromium.launch(headless=True,channel='msedge')
         page = browser.new_page(viewport={'width':1440,'height':1000})
         errors=[]; page.on('pageerror',lambda e:errors.append(str(e)))
-        page.goto(origin,wait_until='networkidle')
+        page.goto(origin+'/login.html',wait_until='networkidle')
         page.screenshot(path=str(output/'v04-login.png'),full_page=True)
         page.locator('#register-tab').click()
         page.locator('#email').fill('acceptance@example.test')

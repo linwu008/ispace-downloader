@@ -121,7 +121,7 @@ try:
         page = context.new_page()
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
-        page.goto(origin)
+        page.goto(origin + "/workspace.html")
         expect(page.locator("#workspace")).to_be_visible()
         expect(page.locator("#welcome")).to_be_hidden()
         page.locator('nav a[href="#/courses"]').click()
@@ -150,7 +150,7 @@ try:
         expect(page.get_by_text("通知 — 原始课程名", exact=True)).to_be_visible()
         page.screenshot(path=str(root / ".runtime/v07-archives-en.png"), full_page=True)
         page.locator("#language-switch").click()
-        page.goto(origin)
+        page.goto(origin + "/workspace.html")
         post(
             "/jobs",
             {"kind": "sync", "payload": {}, "request_id": "browser-sync-0000000001"},

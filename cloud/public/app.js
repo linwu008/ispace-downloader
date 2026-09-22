@@ -43,7 +43,6 @@ const kinds = {
 };
 let state = null,
   jobs = [],
-  register = false,
   current = null,
   draft = new Set(),
   mode = "selected",
@@ -108,7 +107,7 @@ function signedOut() {
   scheduleDirty = false;
   jobs = [];
   $("workspace").hidden = true;
-  $("welcome").hidden = false;
+  location.replace("/login.html?next=" + encodeURIComponent(location.hash || "#/overview"));
   for (const d of document.querySelectorAll("dialog[open]")) d.close();
   if (featurePages[location.hash.slice(2)]) route();
 }
@@ -133,7 +132,7 @@ async function showFeature(name) {
   const reveal = () => {
     if(location.hash.slice(2)!==name)return;
     for(const child of host.children)child.hidden=child!==view;
-    $("workspace").hidden=true; $("welcome").hidden=true;host.hidden=false;view.hidden=false;
+    $("workspace").hidden=true; host.hidden=false;view.hidden=false;
   };
   if (view) { if(view.dataset.ready)reveal(); return; }
   view = document.createElement("div");
@@ -168,7 +167,7 @@ document.addEventListener("click", (event) => {
   if (url.origin !== location.origin) return;
   const name = Object.keys(featurePages).find(k => featurePages[k] === url.pathname);
   if (name && !url.hash) { event.preventDefault(); navigateFeature(name); }
-  else if (featureOpen && url.pathname === "/" && !url.hash) {
+  else if (featureOpen && ["/", "/workspace.html"].includes(url.pathname) && (!url.hash || url.hash === "#/overview")) {
     event.preventDefault(); history.pushState(null, "", returnView.hash); route();
   }
 });
@@ -185,8 +184,7 @@ function route() {
   const restoring = featureOpen;
   featureOpen = false; $("feature-view").hidden = true;
   $("workspace").hidden = !state;
-  if ($("session-loading").hidden) $("welcome").hidden = !!state;
-  if(page === 'intro'){ $('workspace').hidden=true; $('welcome').hidden=false; return; }
+  if(page === 'intro'){ location.replace('/'); return; }
   const chosen = names[page] ? page : "overview";
   document
     .querySelectorAll("[data-page]")
@@ -202,37 +200,6 @@ function route() {
 }
 window.addEventListener("hashchange", route);
 $("mobile-menu").onclick = () => $("sidebar").classList.toggle("open");
-function switchAuth(value) {
-  register = value;
-  $("login-tab").classList.toggle("active", !value);
-  $("register-tab").classList.toggle("active", value);
-  $("invite-field").hidden = !value;
-  $("invite").required = value;
-  $("auth-title").textContent = value ? "创建你的学习空间" : "欢迎回到课巢";
-  $("auth-submit").textContent = value ? "创建账号" : "登录工作空间";
-  $("password").autocomplete = value ? "new-password" : "current-password";
-  $("auth-note").textContent = "";
-}
-$("login-tab").onclick = () => switchAuth(false);
-$("register-tab").onclick = () => switchAuth(true);
-$("auth-form").onsubmit = async (event) => {
-  event.preventDefault();
-  $("auth-submit").disabled = true;
-  try {
-    await api(register ? "/auth/register" : "/auth/login", "POST", {
-      email: $("email").value.trim(),
-      password: $("password").value,
-      invite: $("invite").value,
-    });
-    $("password").value = "";
-    await refresh();
-    if (register) $("setup-dialog").showModal();
-  } catch (e) {
-    $("auth-note").textContent = e.message;
-  } finally {
-    $("auth-submit").disabled = false;
-  }
-};
 $("logout").onclick = async () => {
   try {
     await api("/auth/logout", "POST");
@@ -392,10 +359,13 @@ async function refresh() {
     state = value;
     $("demo-banner").hidden = !window.CourseNestDemo.enabled();
     $("session-loading").hidden = true;
-    $("welcome").hidden = true;
     $("workspace").hidden = false;
     $("account-label").textContent = value.user.email;
     route();
+    if(new URLSearchParams(location.search).has("setup")) {
+      history.replaceState(null,"",location.pathname+location.hash);
+      $("setup-dialog").showModal();
+    }
     jobs = (await api("/jobs")).items;
     const d = value.device,
       s = snapshot();
@@ -730,17 +700,11 @@ $("schedule-form").onsubmit = async (event) => {
     fail(e);
   }
 };
-$("guest-enter").onclick = () => {window.CourseNestDemo.enter();refresh();};
-$("demo-exit").onclick = () => {window.CourseNestDemo.exit();$("demo-banner").hidden=true;history.replaceState(null,"","/");signedOut();};
+$("demo-exit").onclick = () => {window.CourseNestDemo.exit();$("demo-banner").hidden=true;location.replace("/");};
 $("setup-guide").onclick = () => {$("demo-folder-controls").hidden=!window.CourseNestDemo.enabled();$("setup-dialog").showModal();};
 $("demo-folder-save").onclick = () => {$("demo-folder-note").textContent="模拟保存成功，没有访问真实文件夹。";};
 $("guide-local").addEventListener("click",e=>{if(window.CourseNestDemo.enabled()){e.preventDefault();$("demo-folder-controls").hidden=false;}});
 for (const which of ["local","site"]) $("keep-"+which).onclick = async () => {try{await api("/schedule","PUT",{enabled:true,time:which==="local"?snapshot().plan_migration.time:state.device.schedule.time});await refresh();notice("已提交计划选择，等待助手确认。");}catch(e){fail(e);}};
-api("/health")
-  .then((h) => {
-    $("local-hint").hidden = !h.local;
-  })
-  .catch(() => {});
 refresh();
 setInterval(() => {
   if (!document.hidden && state) refresh();
@@ -753,5 +717,4 @@ if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
   $("guide-local").textContent="请在电脑上完成此步骤";
 }
 
-$('copy-wechat').onclick=()=>navigator.clipboard.writeText('guaottttt').then(()=>notice('微信号已复制')).catch(()=>notice('请手动复制微信号'));
 const notesButton=el('button','课程通知与要求','secondary'); notesButton.onclick=()=>window.CourseNestV07.courseNotes(current).catch(fail);$('read-catalog').after(notesButton);
