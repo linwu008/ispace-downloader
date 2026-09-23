@@ -31,8 +31,5 @@ jobs:
       - run: python -m pip install -r requirements-build.lock
       - run: ./scripts/build_assistant.ps1 -PythonPath python
       - run: python scripts/check_bundle.py
-      - uses: actions/upload-artifact@v4
-        with:
-          name: CourseNestHelper-windows-x64
-          path: dist/CourseNestHelper-*-windows-x64.zip
-          retention-days: 14
+      # Release packages are published separately to coursenest-releases.
+      # CI validates the package without retaining duplicate large artifacts.

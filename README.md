@@ -1,6 +1,6 @@
 # BNBU CourseNest · v0.7
 
-官网统一管理课程，Windows 助手负责连接 iSpace 和保存文件。正式网站：https://bnbucoursenest.cn 。网站和助手当前均为 `0.7.0`，此后独立更新；源码仓库保持私有。
+官网统一管理课程，Windows 助手负责连接 iSpace 和保存文件。正式网站：https://bnbucoursenest.cn 。官网版本为 `0.7.0`，电脑助手为 `0.7.1`，两者独立更新。源码公开，正式安装包通过 [公共发布仓库](https://github.com/linwu008/coursenest-releases/releases) 分发。
 
 本版增加课程通知与作业要求、本人出勤/分组的文字提取，私有学期清单与电脑 ZIP 导出，手机下单后电脑就绪确认，中英界面、归巢标识及签名校验升级。原附件仍保存在电脑，网站存档清单不代表云端备份。
 
