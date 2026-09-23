@@ -151,12 +151,22 @@ try:
         page.screenshot(path=str(root / ".runtime/v07-archives-en.png"), full_page=True)
         page.locator("#language-switch").click()
         page.goto(origin + "/workspace.html")
-        post(
-            "/jobs",
-            {"kind": "sync", "payload": {}, "request_id": "browser-sync-0000000001"},
-            csrf,
-        )
-        page.reload()
+        expect(page.locator("#sync-all")).to_be_enabled()
+        page.route("**/api/jobs", lambda route: route.fulfill(status=503, content_type="application/json", body='{"detail":"同步服务暂时不可用，请稍后重试"}') if route.request.method == "POST" else route.continue_())
+        page.locator("#sync-all").click()
+        expect(page.locator("#notice")).to_contain_text("同步服务暂时不可用")
+        expect(page.locator("#sync-all")).to_be_enabled()
+        page.unroute("**/api/jobs")
+        held = []
+        page.route("**/api/jobs", lambda route: held.append(route) if route.request.method == "POST" else route.continue_())
+        page.locator("#sync-all").click()
+        expect(page.locator("#sync-all")).to_be_disabled()
+        expect(page.locator("#sync-all")).to_have_text("正在提交…")
+        expect(page.locator("#notice")).to_contain_text("正在提交同步请求")
+        page.wait_for_timeout(300)
+        assert len(held) == 1
+        held[0].continue_()
+        page.unroute("**/api/jobs")
         expect(page.locator("#download-confirmation")).to_be_visible(timeout=10000)
         page.get_by_role("button", name="稍后处理", exact=True).click()
         page.reload()

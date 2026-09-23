@@ -51,6 +51,7 @@ let state = null,
   availableSelected = new Set(),
   noticeUntil = 0,
   lastSnapshot = -1;
+let syncSubmitting = false;
 const time = (value) =>
   value
     ? new Date(typeof value === "number" ? value * 1000 : value).toLocaleString(
@@ -61,7 +62,7 @@ async function api(path, method = "GET", body) {
   if (window.CourseNestDemo.enabled()) return window.CourseNestDemo.request(path, method, body);
   const res = await fetch("/api" + path, {
     method,
-    ...(path === "/me" ? { signal: AbortSignal.timeout(15000) } : {}),
+    ...(["/me", "/jobs"].includes(path) ? { signal: AbortSignal.timeout(15000) } : {}),
     headers: {
       ...(body ? { "Content-Type": "application/json" } : {}),
       ...(state?.csrf ? { "X-CSRF-Token": state.csrf } : {}),
@@ -216,9 +217,12 @@ async function queue(kind, payload = {}) {
     request_id: crypto.randomUUID(),
   });
   notice(
-    window.CourseNestDemo.enabled() ? "模拟任务已创建，不会执行真实下载。" : state?.device?.online
-      ? "任务已交给同步助手，完成后会更新状态。"
-      : "任务已保存，电脑恢复在线后执行。",
+    window.CourseNestDemo.enabled() ? "模拟任务已创建，不会执行真实下载。"
+      : kind === "sync" && snapshot().capabilities?.includes("confirm-v1")
+        ? "同步请求已保存；电脑准备好后，请在确认窗口点击开始执行。"
+        : state?.device?.online
+          ? "任务已交给同步助手，完成后会更新状态。"
+          : "任务已保存，电脑恢复在线后执行。",
   );
   await refresh();
   return result;
@@ -390,8 +394,8 @@ async function refresh() {
       ? d.schedule.time
       : "未开启";
     $("snapshot-at").textContent = d ? "清单更新于 " + time(s.at) : "";
-    $("sync-all").disabled = !d;
-    $("sync-all").textContent = window.CourseNestDemo.enabled() ? "模拟同步" : "立即同步";
+    $("sync-all").disabled = !d || syncSubmitting;
+    $("sync-all").textContent = syncSubmitting ? "正在提交…" : window.CourseNestDemo.enabled() ? "模拟同步" : "立即同步";
     $("refresh-courses").disabled = !d;
     $("add-courses").disabled = !d;
     $("next-title").textContent = d
@@ -464,7 +468,24 @@ $("new-pair").onclick = async () => {
   }
 };
 $("refresh-courses").onclick = () => queue("refresh_courses").catch(fail);
-$("sync-all").onclick = () => queue("sync").catch(fail);
+$("sync-all").onclick = async () => {
+  if (syncSubmitting) return;
+  syncSubmitting = true;
+  $("sync-all").disabled = true;
+  $("sync-all").textContent = "正在提交…";
+  notice("正在提交同步请求，请稍候…");
+  try {
+    await queue("sync");
+  } catch (e) {
+    fail(["TimeoutError", "AbortError"].includes(e.name)
+      ? Error("请求超时，暂时无法确认是否提交成功。请先查看任务记录，避免重复提交。")
+      : e);
+  } finally {
+    syncSubmitting = false;
+    $("sync-all").disabled = !state?.device;
+    $("sync-all").textContent = window.CourseNestDemo.enabled() ? "模拟同步" : "立即同步";
+  }
+};
 function renderAvailable() {
   const box = $("available-courses");
   box.replaceChildren();

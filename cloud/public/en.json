@@ -782,5 +782,9 @@
   "进入学习空间 ↗": "Open learning space ↗",
   "正在连接学习空间…": "Connecting to your learning space…",
   "本机验收环境 · 邀请码 NEST-LOCAL-04": "Local test environment · Invitation code NEST-LOCAL-04",
-  "课程文件": "Course files"
+  "课程文件": "Course files",
+  "正在提交…": "Submitting…",
+  "正在提交同步请求，请稍候…": "Submitting your sync request. Please wait…",
+  "同步请求已保存；电脑准备好后，请在确认窗口点击开始执行。": "Sync request saved. When the computer is ready, select Start in the confirmation dialog.",
+  "请求超时，暂时无法确认是否提交成功。请先查看任务记录，避免重复提交。": "The request timed out; submission could not be confirmed. Check task history before retrying to avoid duplicates."
 }
