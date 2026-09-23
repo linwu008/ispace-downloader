@@ -16,8 +16,8 @@
     },
   ],
   "vars": {
-    "HELPER_DOWNLOAD_URL": "https://github.com/linwu008/coursenest-releases/releases/download/v0.7/CourseNestHelper-0.7.0-windows-x64.zip",
-    "HELPER_SHA256": "2096aeb55cf7491b1e685b0eae26c229886a5a846438b21dde12ae8d12e541f1",
+    "HELPER_DOWNLOAD_URL": "https://github.com/linwu008/coursenest-releases/releases/download/v0.7.1/CourseNestHelper-0.7.1-windows-x64.zip",
+    "HELPER_SHA256": "83471363792fb81e1b737212e0c6a2567ed75e127888182b3ea38b27cbeb2cb3",
     "ARCHIVE_ENABLED": "0",
     "MAIL_ENABLED": "0",
     "PUBLIC_ORIGIN": "https://bnbucoursenest.cn",
@@ -30,8 +30,8 @@
     "MAX_FILE_BYTES": "50000000",
     "AI_DAILY_NEURONS": "8000",
     "AI_MODEL": "@cf/qwen/qwen3-30b-a3b-fp8",
-    "HELPER_VERSION": "0.7.0",
-    "HELPER_SIGNATURE": "am1wFPMcZ4TcpCT0OqzGvZXUHFrFNjDSSoDakaWGGsShKpGFei0VqoWez90fH1LbDUrGkNR7pdOUv1FwTW8JAg==",
+    "HELPER_VERSION": "0.7.1",
+    "HELPER_SIGNATURE": "ft6c3P/OLwLAmJ12njS2yL73fIUkvlxTQM7bnTOy2YsqKDzeRyIrpIBrEqdmtlbTZwf1ZJSUovqZ0kipiUl/Cg==",
   },
   "triggers": { "crons": ["*/5 * * * *"] },
 }

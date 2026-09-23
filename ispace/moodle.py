@@ -14,6 +14,23 @@ from .security import LoginRequired
 from .grouping import TeachingGroup, UNKNOWN, group_for
 
 BASE = "https://ispace.bnbu.edu.cn"
+DISCOVERY_PAGE_LIMIT = 300
+DISCOVERY_TIME_LIMIT = 120  # Checked between requests, which have their own timeout.
+ATTENDANCE_PATH = "/mod/attendance/view.php"
+
+
+def discovery_url(url):
+    """Attendance is a single own-report leaf, never a calendar crawl."""
+    parts = urlsplit(url)
+    if parts.path != ATTENDANCE_PATH:
+        return url
+    query = parse_qs(parts.query)
+    if set(query) - {"id", "curdate", "view", "mode"}:
+        return None
+    ids = query.get("id", [])
+    if len(ids) != 1 or not ids[0].isdigit():
+        return None
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode({"id": ids[0]}), ""))
 
 
 class ResourceError(Exception):
@@ -233,6 +250,8 @@ class Moodle:
         raise ResourceError("课程列表超过读取上限")
 
     def discover(self, course_id):
+        from .cancellation import check
+        started = time.monotonic()
         result = Discovery()
         if not hasattr(self, "course_content"): self.course_content = {}
         seen_files, seen_pages, teachers = set(), set(), set()
@@ -245,9 +264,21 @@ class Moodle:
         except (ResourceError, httpx.HTTPError):
             pass
         queue = deque([(self.base + f"/course/view.php?id={course_id}", UNKNOWN)])
+        queued = {(canonical(queue[0][0]), UNKNOWN.key)}
+
+        def enqueue(target, group):
+            target = discovery_url(target)
+            if target is None:
+                return
+            key = (canonical(target), group.key)
+            if key not in queued:
+                queued.add(key)
+                queue.append((target, group))
+
         while queue:
-            if len(seen_pages) >= 5000:
-                result.errors.append("达到页面读取上限，部分资源尚未检查")
+            check()
+            if len(seen_pages) >= DISCOVERY_PAGE_LIMIT or time.monotonic() - started >= DISCOVERY_TIME_LIMIT:
+                result.errors.append("课程页面扫描达到时间或数量上限，已找到的资料继续处理；未覆盖内容请在学校原网页查看")
                 break
             url, inherited = queue.popleft()
             page_key = (canonical(url), inherited.key)
@@ -274,6 +305,7 @@ class Moodle:
                 is_forum = "/mod/forum/" in path
                 discovered_here = 0
                 for node in content.select('a[href], object[data], embed[src], iframe[src]'):
+                    check()
                     target = urljoin(actual_url, node.get("href") or node.get("data") or node.get("src"))
                     parts = urlsplit(target)
                     group = group_for(node, inherited, actual_url)
@@ -298,15 +330,17 @@ class Moodle:
                         continue
                     if not self.allowed(target):
                         continue
+                    if path == ATTENDANCE_PATH:
+                        # Keep displayed own attendance; never walk previous/next dates.
+                        continue
                     query = parse_qs(parts.query)
                     supported = parts.path in {"/mod/resource/view.php", "/mod/folder/view.php", "/mod/forum/view.php", "/mod/forum/discuss.php", "/mod/assign/view.php", "/mod/page/view.php", "/mod/url/view.php", "/mod/attendance/view.php", "/mod/groupselect/view.php", "/mod/choicegroup/view.php"}
                     if supported and not any(k in query for k in ("action", "sesskey", "edit", "delete", "submit")):
-                        if (canonical(target), group.key) not in seen_pages:
-                            queue.append((target, group))
+                        enqueue(target, group)
                     elif parts.path == "/course/view.php" and query.get("id") == [str(course_id)] and "section" in query:
-                        queue.append((target, group))
+                        enqueue(target, group)
                     elif parts.path == "/course/section.php" and query.get("id"):
-                        queue.append((target, group))
+                        enqueue(target, group)
                 if path == "/mod/resource/view.php" and discovered_here == 0:
                     raise ResourceError("文件资源页未发现可下载附件，可能需要适配嵌入方式")
                 time.sleep(0.15)

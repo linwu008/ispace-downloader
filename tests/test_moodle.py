@@ -96,3 +96,55 @@ def test_invalid_attachment_never_accepted(tmp_path, status, headers, content, e
 
 def test_head_not_supported_falls_back_to_hash():
     assert platform(lambda _: httpx.Response(405)).metadata(Resource("https://school.test/a.pdf", "a.pdf")) == {}
+
+
+
+def test_attendance_calendar_is_leaf_and_files_still_discovered(monkeypatch):
+    monkeypatch.setattr("ispace.moodle.time.sleep", lambda _: None)
+    visited = []
+    def handler(request):
+        visited.append(request.url.raw_path.decode())
+        if request.url.path == "/course/view.php":
+            body = ''.join(f'<a href="/mod/attendance/view.php?id=9&{q}">Attendance</a>'
+                           for q in ['curdate=100', 'view=3', 'mode=1', 'studentid=55'])
+            body += '<a href="/mod/folder/view.php?id=5">Files</a>'
+        elif request.url.path == "/mod/attendance/view.php":
+            assert dict(request.url.params) == {'id': '9'}
+            body = ('<table class="attwidth"><tr><td class="datecol">Monday</td>'
+                    '<td class="statuscol">Present</td></tr></table>'
+                    '<a href="?id=9&curdate=200">Next</a><a href="?id=9&curdate=0">Previous</a>'
+                    '<a href="?id=9&view=3">All</a><a href="?id=9&studentid=55">Other</a>')
+        elif request.url.path == "/mod/folder/view.php":
+            body = '<a href="/pluginfile.php/5/mod_folder/content/0/slides.pdf">Slides</a>'
+        else:
+            body = ''
+        return httpx.Response(200, text=page(body))
+    result = platform(handler).discover(1)
+    assert not result.errors
+    assert [r.name for r in result.resources] == ['slides.pdf']
+    assert len([u for u in visited if '/attendance/' in u]) == 1
+    assert 'Present' in next(n for n in result.notes if n['category'] == 'attendance')['body']
+    assert len(visited) == 4
+
+
+@pytest.mark.parametrize('limit', ['pages', 'time'])
+def test_discovery_budget_keeps_found_files_reports_partial(monkeypatch, limit):
+    monkeypatch.setattr('ispace.moodle.time.sleep', lambda _: None)
+    visited, clock = [], [0]
+    monkeypatch.setattr('ispace.moodle.time.monotonic', lambda: clock[0])
+    if limit == 'pages':
+        monkeypatch.setattr('ispace.moodle.DISCOVERY_PAGE_LIMIT', 2)
+    def handler(request):
+        visited.append(str(request.url))
+        body = '<a href="/pluginfile.php/5/mod_folder/content/0/slides.pdf">Slides</a>'
+        if request.url.path == '/course/view.php':
+            body += '<a href="/mod/forum/view.php?id=1&page=0">Forum</a>' * 10
+        if request.url.path == '/mod/forum/view.php':
+            n = int(request.url.params['page'])
+            body = f'<a href="?id=1&page={n+1}">Next</a>'
+            if limit == 'time': clock[0] = 121
+        return httpx.Response(200, text=page(body))
+    result = platform(handler).discover(1)
+    assert result.errors and '上限' in result.errors[0]
+    assert result.resources
+    assert len(visited) == 3

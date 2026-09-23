@@ -90,13 +90,13 @@ window.CourseNestI18n = (() => {
         await fetch(local ? "/static/en.json" : "/en.json")
       ).json();
     } catch {}
-    const b = document.createElement("button");
+    const b = document.getElementById("language-switch") || document.createElement("button");
     b.id = "language-switch";
     b.type = "button";
     b.dataset.noTranslate = "true";
     b.textContent = language === "en" ? "中文" : "English";
     b.onclick = toggle;
-    document.body.append(b);
+    if (!b.isConnected) document.body.append(b);
     document.documentElement.lang = language === "en" ? "en" : "zh-CN";
     observe(document.body);
   }
