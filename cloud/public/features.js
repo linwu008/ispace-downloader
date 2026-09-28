@@ -13,6 +13,7 @@ async function api(path, method = "GET", data) {
   if (window.CourseNestDemo?.enabled()) return window.CourseNestDemo.request(path,method,data);
   const r = await fetch("/api" + path, {
     method,
+    signal: AbortSignal.timeout(15000),
     headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
     ...(data ? { body: JSON.stringify(data) } : {}),
   });
@@ -24,7 +25,7 @@ async function act(fn) {
   try {
     await fn();
   } catch (e) {
-    if ($("message")) $("message").textContent = e.message;
+    if ($("message")) $("message").textContent = window.CourseNestExperience?.error(e) || e.message;
   }
 }
 function button(text, fn) {

@@ -1,10 +1,11 @@
 {
   "name": "bnbu-coursenest",
   "private": true,
-  "version": "0.7.0",
+  "version": "1.0.0-rc.1",
   "type": "module",
   "scripts": {
     "dev": "node dev.mjs",
+    "staging": "node staging.mjs",
     "test": "node --test test/*.test.mjs",
     "check": "node --check src/worker.js"
   },

@@ -10,6 +10,7 @@
     <script defer src="/demo.js"></script>
     <script defer src="/features.js"></script>
     <script defer src="/transitions.js"></script>
+    <script defer src="/experience.js"></script>
     <script defer src="/v07.js"></script>
     <script defer src="/app.js"></script>
     <script defer src="/i18n.js"></script>
@@ -55,7 +56,7 @@
         <div class="sidebar-footer">
           <strong id="account-label"></strong
           ><button id="logout" class="text-button">退出登录</button
-          ><small>官网 v0.7 · 非学校官方网站</small>
+          ><small>官网 v1.0 候选版 · 非学校官方网站</small>
         </div>
       </aside>
       <main>
@@ -74,7 +75,10 @@
           </div>
         </div>
         <div id="notice" role="status" class="notice" hidden></div>
+        <div id="connection-detail" class="notice" role="status" aria-live="polite"></div>
         <section data-page="overview">
+          <div id="onboarding" class="panel"></div>
+          <div id="study-digest" class="panel"><h2>课程要求与最近更新</h2><p>正在读取已保存的课程文字…</p></div>
           <div class="metrics">
             <article>
               <span>我的课程</span><strong id="metric-courses">0</strong
@@ -86,7 +90,7 @@
             </article>
             <article>
               <span>等待 / 进行中</span><strong id="metric-jobs">0</strong
-              ><small>离线任务恢复后执行</small>
+              ><small>含待确认任务 · 以实际执行状态为准</small>
             </article>
             <article>
               <span>网站每日计划</span><strong id="metric-time">未开启</strong
@@ -125,6 +129,7 @@
                 ><button id="add-courses" class="primary">添加课程</button>
               </div>
             </div>
+            <div class="course-tools"><label>搜索全部课程与文件<input id="global-search" type="search" placeholder="课程名称、文件名或 Week" /></label><label class="check"><input id="only-unsaved" type="checkbox" />只看尚未保存的文件</label><p id="search-summary" role="status"></p></div><div id="global-results"></div>
             <div id="course-grid" class="course-grid"></div>
           </div>
         </section>
@@ -212,7 +217,7 @@
               网站保存课程文字、存档索引、文件选择和任务状态。原附件与学校密码保留在电脑。解除配对撤销设备授权，但已建立的学期存档仍保留。
             </p>
             <p class="hint">
-              账号通过邀请码注册；验证邮箱与找回密码请打开账号服务。
+              账号通过邀请码注册。邮件服务暂未开放，暂不支持自助找回密码；遇到账号问题请通过常见问题页联系我们。
             </p>
           </article>
         </section>

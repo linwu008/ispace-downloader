@@ -420,11 +420,28 @@ export function createV07(h) {
       const b = await body(request);
       return decision(env, d, b.ids, b.action);
     }
+    if (p === "/api/v07/activity" && m === "GET") {
+      const select =
+        "SELECT n.id,n.category,n.title,substr(n.body,1,1000) excerpt,n.url,n.partial,n.updated,a.course_id,a.course_name,t.label semester FROM study_notes n JOIN study_archives a ON a.id=n.archive_id JOIN study_terms t ON t.id=a.term_id WHERE a.user_id=? AND t.active=1";
+      const assignments = await all(
+        env,
+        select +
+          " AND n.category='assignment' ORDER BY n.updated DESC,n.id LIMIT 8",
+        u.id,
+      );
+      const recent = await all(
+        env,
+        select +
+          " AND n.category<>'assignment' ORDER BY n.updated DESC,n.id LIMIT 8",
+        u.id,
+      );
+      return json({ assignments, recent });
+    }
     if (p === "/api/v07/archives" && m === "GET")
       return json(
         await all(
           env,
-          "SELECT a.*,t.label AS semester,(SELECT COUNT(*) FROM study_files f WHERE f.archive_id=a.id) file_count,(SELECT COUNT(*) FROM study_notes n WHERE n.archive_id=a.id) note_count FROM study_archives a JOIN study_terms t ON t.id=a.term_id WHERE a.user_id=? ORDER BY a.created DESC",
+          "SELECT a.*,t.label AS semester,(SELECT COUNT(*) FROM study_files f WHERE f.archive_id=a.id) file_count,(SELECT COUNT(*) FROM study_notes n WHERE n.archive_id=a.id) note_count,(SELECT COUNT(*) FROM study_files f WHERE f.archive_id=a.id AND f.available=1) available_count,(SELECT MAX(updated) FROM study_files f WHERE f.archive_id=a.id) files_checked_at,(SELECT MAX(updated) FROM jobs j WHERE j.user_id=a.user_id AND j.kind='archive_export' AND j.status='success' AND json_extract(j.payload,'$.archive_id')=a.id) last_export_at,(SELECT status FROM jobs j WHERE j.user_id=a.user_id AND j.kind='archive_export' AND json_extract(j.payload,'$.archive_id')=a.id ORDER BY j.created DESC,j.id DESC LIMIT 1) export_status FROM study_archives a JOIN study_terms t ON t.id=a.term_id WHERE a.user_id=? ORDER BY a.created DESC",
           u.id,
         ),
       );

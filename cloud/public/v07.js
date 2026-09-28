@@ -17,6 +17,7 @@ window.CourseNestV07 = (() => {
   async function api(path, method = "GET", value) {
     const r = await fetch("/api/v07" + path, {
       method,
+      signal: AbortSignal.timeout(15000),
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
       ...(value ? { body: JSON.stringify(value) } : {}),
     });
@@ -28,13 +29,28 @@ window.CourseNestV07 = (() => {
     const b = node("button", text);
     b.type = "button";
     b.onclick = async () => {
+      if (b.disabled) return;
+      const original = b.textContent;
       b.disabled = true;
+      b.textContent = "正在处理…";
       try {
         await fn();
       } catch (e) {
-        message(e.message);
+        const target =
+          document.querySelector("dialog[open]") || b.parentElement;
+        let feedback = target?.querySelector(":scope > .action-feedback");
+        if (!feedback && target) {
+          feedback = node("p");
+          feedback.className = "action-feedback";
+          feedback.setAttribute("role", "alert");
+          target.append(feedback);
+        }
+        if (feedback)
+          feedback.textContent = window.CourseNestExperience.error(e);
+        else message(window.CourseNestExperience.error(e));
       } finally {
         b.disabled = false;
+        b.textContent = original;
       }
     };
     return b;
@@ -65,7 +81,7 @@ window.CourseNestV07 = (() => {
         "首次同步前确认学期，新学期另建存档。已存资料不会因学校清空而删除。",
       ),
     );
-    const defaultTerm = "2026–2027 / 第一学期";
+    const defaultTerm = window.CourseNestExperience.semester();
     const active = terms.find((t) => t.active);
     const input = node("input");
     input.placeholder = defaultTerm;
@@ -83,6 +99,17 @@ window.CourseNestV07 = (() => {
     status.className = "term-status";
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
+    const currentLabel = node(
+      "p",
+      "当前学期：" + (active?.label || "尚未确认"),
+    );
+    section.append(currentLabel);
+    section.append(
+      node(
+        "small",
+        "空白时使用按北京时间推算的建议学期，可自行修改。切换只影响之后建立的存档，已有存档归属不变；修改学期名称会同步显示在该学期已有存档中。",
+      ),
+    );
     section.append(
       select,
       input,
@@ -109,9 +136,10 @@ window.CourseNestV07 = (() => {
           }
           select.value = saved.id;
           input.value = saved.label;
+          currentLabel.textContent = "当前学期：" + saved.label;
           status.textContent = "学期已确认";
         } catch (e) {
-          status.textContent = e.message || "操作失败";
+          status.textContent = window.CourseNestExperience.error(e);
         }
       }),
       status,
@@ -238,10 +266,29 @@ window.CourseNestV07 = (() => {
         "课程文字保存在网站；原文件保存在电脑。电脑离线时仍可查看文字与清单，原文件尚不支持云端下载和分享。",
       ),
     );
-    await termForm(host);
+    const controls = node("div");
+    const back = node("a", "返回学习空间");
+    back.href = "/workspace.html";
+    controls.append(
+      back,
+      button("刷新存档状态", () => archiveView(host, state)),
+    );
+    host.append(controls);
+    try {
+      await termForm(host);
+    } catch (e) {
+      host.append(node("p", window.CourseNestExperience.error(e)));
+      return;
+    }
     const list = node("div");
     host.append(list);
-    const archives = await api("/archives");
+    let archives;
+    try {
+      archives = await api("/archives");
+    } catch (e) {
+      list.append(node("p", window.CourseNestExperience.error(e)));
+      return;
+    }
     if (!archives.length)
       list.append(
         node("p", "确认学期后，已选择同步的资料会在助手连接时建立存档。"),
@@ -261,6 +308,54 @@ window.CourseNestV07 = (() => {
             " 条课程内容",
         ),
       );
+      section.append(
+        node(
+          "p",
+          a.file_count
+            ? `上次检查存在 ${a.available_count || 0} 份 · 本地缺失 ${a.file_count - (a.available_count || 0)} 份`
+            : "仅有课程文字或索引，尚未登记原文件",
+        ),
+      );
+      section.append(
+        node(
+          "small",
+          "原文件检查时间：" +
+            (a.files_checked_at
+              ? new Date(a.files_checked_at * 1000).toLocaleString()
+              : "尚未检查"),
+        ),
+      );
+      section.append(
+        node(
+          "p",
+          "最近成功导出：" +
+            (a.last_export_at
+              ? new Date(a.last_export_at * 1000).toLocaleString()
+              : "尚无成功记录") +
+            "。导出包在电脑上；此记录不能证明文件当前仍存在。",
+        ),
+      );
+      if (a.export_status)
+        section.append(
+          node(
+            "p",
+            "最新导出状态：" +
+              ({
+                awaiting_confirmation: "待确认",
+                queued: "等待电脑",
+                running: "正在导出",
+                canceling: "正在取消",
+                canceled: "已取消",
+                success: "已完成",
+                partial: "部分完成",
+                failed: "失败",
+                auth_required: "需要登录",
+              }[a.export_status] || a.export_status),
+          ),
+        );
+      const exportFeedback = node("p");
+      exportFeedback.setAttribute("role", "status");
+      section.append(exportFeedback);
       section.append(
         button("查看内容", async () => {
           const d = dialog(a.course_name);
@@ -287,16 +382,17 @@ window.CourseNestV07 = (() => {
           await api("/archives/" + a.id + "/export", "POST", {
             request_id: crypto.randomUUID(),
           });
-          message(
-            "导出任务已提交，电脑准备好后请确认。压缩包保存在电脑，包含课程文字和历史版本。",
-          );
+          exportFeedback.textContent =
+            "导出任务已提交，电脑准备好后请确认。压缩包保存在电脑，包含课程文字和历史版本。执行进展见任务记录。";
         }),
         button("修改学期归属", async () => {
           const terms = await api("/terms");
           const d = dialog("修改学期归属"),
             select = node("select");
           for (const t of terms) select.append(new Option(t.label, t.id));
+          select.value = a.term_id;
           d.append(
+            node("p", "仅修改此课程存档的学期归属，不移动或删除电脑文件。"),
             select,
             button("保存", async () => {
               await api("/archives/" + a.id + "/term", "POST", {
@@ -350,7 +446,15 @@ window.CourseNestV07 = (() => {
     });
     d.showModal();
   }
-  async function refresh(state) {
+  let refreshing = null;
+  function refresh(state) {
+    if (refreshing) return refreshing;
+    refreshing = refreshOnce(state).finally(() => {
+      refreshing = null;
+    });
+    return refreshing;
+  }
+  async function refreshOnce(state) {
     if (!state || window.CourseNestDemo?.enabled()) return;
     csrf = state.csrf;
     if (activeUser !== state.user.id) {
@@ -381,10 +485,6 @@ window.CourseNestV07 = (() => {
     }
     buttonNode.hidden = !pending.length;
     buttonNode.textContent = "待确认任务 (" + pending.length + ")";
-    const ready = state.device?.snapshot?.readiness;
-    if (state.device?.online && ready && !ready.auth)
-      document.getElementById("connection").textContent =
-        "电脑在线 · 请连接学校账号";
     await decisions();
   }
   return { refresh, archiveView, courseNotes };

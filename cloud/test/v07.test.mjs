@@ -104,6 +104,9 @@ test("manual tasks wait for readiness, dismissal persists, confirmation is owned
       d,
     );
     const stranger = await user(e, "two@example.org");
+    assert.deepEqual((await req(e, "/v07/activity", "GET", null, stranger)).data, {assignments:[],recent:[]});
+    assert.deepEqual((await req(e, "/v07/archives", "GET", null, stranger)).data, []);
+    assert.equal((await req(e, "/v07/activity")).status, 401);
     assert.equal(
       (
         await req(
@@ -234,6 +237,24 @@ test("personal archives work without email or R2, retain note history and surviv
     const indexed = await req(e, "/v07/device/index", "POST", payload, d);
     assert.equal(indexed.status, 200, JSON.stringify(indexed));
     const id = indexed.data.archive_id;
+    const activity = await req(e, "/v07/activity", "GET", null, a);
+    assert.equal(activity.data.assignments[0].excerpt, "Due Friday");
+    assert.equal(activity.data.assignments[0].course_name, "Math");
+    assert.equal(activity.data.assignments[0].semester, "2026–27 / 1");
+    assert.equal(activity.data.recent.length, 0);
+    const summary = (await req(e, "/v07/archives", "GET", null, a)).data[0];
+    assert.equal(summary.available_count, 1);
+    assert.ok(summary.files_checked_at > 0);
+    assert.equal(summary.last_export_at, null);
+    const exportJob = await req(e, "/v07/archives/" + id + "/export", "POST", {request_id:"release-export-00001"}, a);
+    assert.equal(exportJob.status, 202);
+    let exports = (await req(e, "/v07/archives", "GET", null, a)).data[0];
+    assert.equal(exports.export_status, "awaiting_confirmation");
+    assert.equal(exports.last_export_at, null);
+    e.raw.prepare("UPDATE jobs SET status='success',updated=100 WHERE id=?").run(exportJob.data.id);
+    exports = (await req(e, "/v07/archives", "GET", null, a)).data[0];
+    assert.equal(exports.last_export_at, 100);
+
     await req(e, "/v07/device/index", "POST", payload, d);
     assert.equal(
       e.raw.prepare("SELECT COUNT(*) n FROM study_note_history").get().n,
@@ -250,6 +271,7 @@ test("personal archives work without email or R2, retain note history and surviv
       404,
     );
     await req(e, "/v07/terms", "POST", { label: "2026–27 / 2" }, a);
+    assert.deepEqual((await req(e, "/v07/activity", "GET", null, a)).data, {assignments:[],recent:[]});
     assert.equal(
       (await req(e, "/v07/device/index", "POST", payload, d)).status,
       409,

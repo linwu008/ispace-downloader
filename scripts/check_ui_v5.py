@@ -41,7 +41,7 @@ try:
         term=client.post('/api/v07/terms',json={'label':'2026 Fall'}).json()
         response=client.post('/api/v07/device/index',headers=headers,json={'term_id':term['id'],'course_id':1,'files':[{'source_key':'fixture','name':'lecture.txt','group_name':'Week 1','bytes':10,'sha':'a'*64,'available':True}],'notes':[]})
         response.raise_for_status()
-        page.goto(origin+'/archives.html');expect(page.locator('p').filter(has_text='2026 Fall')).to_be_visible()
+        page.goto(origin+'/archives.html');expect(page.get_by_text('2026 Fall · 1 份电脑文件 · 0 条课程内容',exact=True)).to_be_visible()
         page.get_by_role('button',name='查看内容',exact=True).click();expect(page.locator('.v07-dialog')).to_contain_text('lecture.txt')
         page.locator('.v07-dialog button').first.click()
         root.joinpath('.runtime').mkdir(exist_ok=True);page.screenshot(path=str(root/'.runtime/v05-archives.png'),full_page=True)

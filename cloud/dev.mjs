@@ -8,6 +8,11 @@ const env = localEnv(
   process.env.COURSENEST_DB || resolve(root, "../.runtime/cloud-v04.sqlite3"),
   origin,
 );
+if (process.env.COURSENEST_PRODUCTION_LIKE === "1") {
+  env.ARCHIVE_ENABLED = "0"; env.MAIL_ENABLED = "0"; env.QA_ENABLED = "0";
+  env.INVITE_REQUIRED = "1";
+  delete env.ARCHIVE_BUCKET;
+}
 const server = createServer(async (req, res) => {
   try {
     let size = 0;
@@ -38,7 +43,7 @@ const server = createServer(async (req, res) => {
 });
 server.listen(port, "127.0.0.1", () =>
   console.log(
-    `BNBU CourseNest v0.5 preview: ${origin} (invite: ${env.INVITE_CODE})`,
+    `BNBU CourseNest isolated preview: ${origin} (invite: ${env.INVITE_CODE})`,
   ),
 );
 const timer = setInterval(

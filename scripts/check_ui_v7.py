@@ -97,7 +97,7 @@ try:
             term_page.get_by_role("button", name="确认学期", exact=True).click()
         assert saved.value.ok
         term = saved.value.json()
-        assert term["label"] == "2026–2027 / 第一学期"
+        assert term["label"] == term_page.evaluate("CourseNestExperience.semester()")
         expect(field).to_have_value(term["label"])
         expect(term_page.locator(".term-status")).to_have_text("学期已确认")
         expect(term_page.locator(".v07-card select")).to_have_value(term["id"])

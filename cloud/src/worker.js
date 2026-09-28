@@ -2,7 +2,7 @@ import {ensureStudySchema} from "./study_schema.js";
 import { advanceKnowledge } from "./knowledge.js";
 import { createV07 } from "./v07.js";
 import { createV05 } from "./v05.js";
-const VERSION = "0.7.0";
+const VERSION = "1.0.0-rc.1";
 const enc = new TextEncoder();
 const hex = (b) =>
   Array.from(new Uint8Array(b), (n) => n.toString(16).padStart(2, "0")).join(
