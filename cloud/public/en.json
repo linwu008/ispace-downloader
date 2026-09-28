@@ -823,5 +823,10 @@
   "课巢账号和学校账号相互独立。目前邮件找回密码尚未开放，无法登录时请通过下方联系方式反馈，由维护者核实可处理方式，不保证可以直接重置。云端原文件存储、分享、AI 总结和问答也尚未开放。": "CourseNest and school accounts are separate. Email password recovery is not available yet. If you cannot sign in, contact support below to discuss the available options; a direct reset is not guaranteed. Cloud file storage, sharing, AI summaries and Q&A are also not enabled yet.",
   "官网更新后，每次都要重新下载助手吗？": "Do I need to reinstall the helper whenever the website updates?",
   "不需要。官网与助手独立更新，界面和帮助内容更新通常不需要升级助手。只有功能确实依赖新版助手或涉及兼容、安全修复时才需要更新；请以电脑设置中的更新提示为准，任务结束后再升级。": "No. The website and helper update independently. Interface and help changes normally need no helper update. Update when a feature requires a newer helper or a compatibility or security fix is needed. Follow the update notice in computer settings after current tasks finish.",
-  "联系与反馈 ↗": "Contact and feedback ↗"
+  "联系与反馈 ↗": "Contact and feedback ↗",
+  "帮助中心": "Help centre",
+  "帮助导航": "Help navigation",
+  "返回首页": "Back to home",
+  "查看常见问题 ↗": "Browse common questions ↗",
+  "安装、配对、同步与学期存档，常见问题都有解决步骤。": "Find practical help with installation, pairing, syncing and semester archives."
 }
