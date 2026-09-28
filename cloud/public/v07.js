@@ -65,26 +65,56 @@ window.CourseNestV07 = (() => {
         "首次同步前确认学期，新学期另建存档。已存资料不会因学校清空而删除。",
       ),
     );
+    const defaultTerm = "2026–2027 / 第一学期";
+    const active = terms.find((t) => t.active);
     const input = node("input");
-    input.placeholder = "2026–2027 / 第一学期";
+    input.placeholder = defaultTerm;
     input.maxLength = 80;
-    input.value = terms.find((t) => t.active)?.label || "";
+    input.value = active?.label || "";
+    input.setAttribute("aria-label", "学年与学期");
     const select = node("select");
     select.append(new Option("新建学期", ""));
     for (const t of terms) select.append(new Option(t.label, t.id));
+    select.value = active?.id || "";
     select.onchange = () => {
       input.value = terms.find((t) => t.id === select.value)?.label || "";
     };
+    const status = node("p");
+    status.className = "term-status";
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
     section.append(
       select,
       input,
       button("确认学期", async () => {
-        await api("/terms", "POST", {
-          label: input.value,
-          ...(select.value ? { id: select.value } : {}),
-        });
-        message("学期已确认");
+        const selected = terms.find((t) => t.id === select.value);
+        const label = input.value.trim() || selected?.label || defaultTerm;
+        input.value = label;
+        status.textContent = "正在保存…";
+        try {
+          const saved = await api("/terms", "POST", {
+            label,
+            ...(select.value ? { id: select.value } : {}),
+          });
+          let term = terms.find((t) => t.id === saved.id);
+          if (!term) {
+            term = { id: saved.id };
+            terms.push(term);
+            select.append(new Option(saved.label, saved.id));
+          }
+          for (const t of terms) t.active = t.id === saved.id;
+          term.label = saved.label;
+          for (const option of select.options) {
+            if (option.value === saved.id) option.textContent = saved.label;
+          }
+          select.value = saved.id;
+          input.value = saved.label;
+          status.textContent = "学期已确认";
+        } catch (e) {
+          status.textContent = e.message || "操作失败";
+        }
       }),
+      status,
     );
     host.append(section);
   }

@@ -88,7 +88,39 @@ try:
             },
         }
         post("/device/poll", {"snapshot": snap, "paused": True}, auth)
-        term = post("/v07/terms", {"label": "2026–2027 / 第一学期"}, csrf)
+        term_page = context.new_page()
+        term_page.goto(origin + "/archives.html")
+        field = term_page.locator('input[aria-label="学年与学期"]')
+        expect(field).to_have_value("")
+        field.fill("   ")
+        with term_page.expect_response(lambda r: r.url.endswith("/api/v07/terms") and r.request.method == "POST") as saved:
+            term_page.get_by_role("button", name="确认学期", exact=True).click()
+        assert saved.value.ok
+        term = saved.value.json()
+        assert term["label"] == "2026–2027 / 第一学期"
+        expect(field).to_have_value(term["label"])
+        expect(term_page.locator(".term-status")).to_have_text("学期已确认")
+        expect(term_page.locator(".v07-card select")).to_have_value(term["id"])
+        term_page.reload()
+        expect(field).to_have_value(term["label"])
+        # Clearing an existing term keeps its label instead of renaming it to the default.
+        field.fill("自定义学期")
+        term_page.get_by_role("button", name="确认学期", exact=True).click()
+        expect(term_page.locator(".term-status")).to_have_text("学期已确认")
+        field.fill("")
+        term_page.get_by_role("button", name="确认学期", exact=True).click()
+        expect(field).to_have_value("自定义学期")
+        expect(term_page.locator(".term-status")).to_have_text("学期已确认")
+        # Failed requests must be visible next to the form, including on archive pages.
+        term_page.route("**/api/v07/terms", lambda r: r.fulfill(status=503, json={"detail":"暂时无法保存"}) if r.request.method == "POST" else r.continue_())
+        term_page.get_by_role("button", name="确认学期", exact=True).click()
+        expect(term_page.locator(".term-status")).to_have_text("暂时无法保存")
+        term_page.unroute("**/api/v07/terms")
+        field.fill(term["label"])
+        term_page.get_by_role("button", name="确认学期", exact=True).click()
+        expect(term_page.locator(".term-status")).to_have_text("学期已确认")
+        assert len(request.get(origin + "/api/v07/terms").json()) == 1
+        term_page.close()
         archive = post(
             "/v07/device/index",
             {
