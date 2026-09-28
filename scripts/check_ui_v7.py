@@ -200,7 +200,9 @@ try:
         held[0].continue_()
         page.unroute("**/api/jobs")
         expect(page.locator("#download-confirmation")).to_be_visible(timeout=10000)
-        page.get_by_role("button", name="稍后处理", exact=True).click()
+        with page.expect_response(lambda r: r.url.endswith("/api/v07/confirm") and r.request.method == "POST") as dismissed:
+            page.get_by_role("button", name="稍后处理", exact=True).click()
+        assert dismissed.value.ok
         page.reload()
         expect(page.locator("#workspace")).to_be_visible()
         expect(page.locator("#pending-button")).to_be_visible()
