@@ -1901,3 +1901,36 @@ html[lang="en"] .app-preview .saved {
     margin-bottom: 30px;
   }
 }
+
+/* Help stays readable without JavaScript and uses the browser's keyboard controls. */
+.faq { background: #edf4f3; }
+.faq-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 50px; }
+.faq-topics { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.faq-topics a { padding: 9px 14px; border-radius: 6px; font-size: 14px; background: #fff; }
+.faq-topics a:hover { background: var(--mint); }
+.faq-group + .faq-group { margin-top: 32px; }
+.faq-group h3 { font-size: 15px; color: #396b73; margin: 0 0 14px; }
+.faq-item { background: #fff; border: 1px solid var(--line); border-radius: 8px; margin: 10px 0; overflow: hidden; }
+.faq-item summary { cursor: pointer; padding: 19px 48px 19px 22px; list-style: none; position: relative; font-size: 16px; font-weight: 600; line-height: 1.6; }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after { content: '+'; position: absolute; right: 20px; top: 18px; color: var(--blue); font-size: 21px; }
+.faq-item[open] summary::after { content: '−'; }
+.faq-item summary:focus-visible { outline: 2px solid var(--blue); outline-offset: -4px; border-radius: 8px; }
+.faq-answer { padding: 0 22px 20px; color: #47656b; font-size: 15px; line-height: 1.9; overflow-wrap: anywhere; }
+.faq-answer p { margin: 0; }
+.faq-contact { display: flex; justify-content: space-between; gap: 36px; border-top: 1px solid #cbdeda; margin-top: 40px; padding-top: 30px; }
+.faq-contact h3 { font-size: 20px; margin: 0 0 8px; }
+.faq-contact p { max-width: 640px; font-size: 14px; color: #47656b; margin: 0; }
+.faq-contact > div:last-child { display: flex; flex-direction: column; gap: 5px; font-size: 14px; flex-shrink: 0; }
+.faq-contact a { color: #086a7b; font-weight: 600; text-decoration: underline; }
+@media (max-width: 760px) {
+  .faq-layout { grid-template-columns: 1fr; gap: 24px; }
+  .faq-topics { flex-direction: row; flex-wrap: wrap; gap: 8px; }
+  .faq-topics a { font-size: 13px; }
+  .faq-contact { flex-direction: column; gap: 18px; }
+  .faq-item summary { font-size: 16px; padding-left: 16px; }
+  .faq-answer { padding-left: 16px; padding-right: 16px; }
+  .faq .section-heading { display: block; }
+  .faq .section-heading p { font-size: 14px; margin-top: 18px; }
+  .faq .section-heading h2 { font-size: 28px; }
+}
