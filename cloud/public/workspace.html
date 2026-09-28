@@ -34,16 +34,24 @@
       <aside id="sidebar">
         <a class="brand" href="#/overview"
           ><img src="/logo.png" alt="" /> <span>BNBU <b>CourseNest</b></span></a
-        ><button id="mobile-menu" class="secondary">菜单</button>
-        <div class="nav-caption">我的学习空间</div>
-        <nav>
-          <a href="/help.html">常见问题</a><a href="/" id="intro-link">关于课巢</a
-          ><a href="/archives.html">▧　学期存档</a
-          ><a href="/download.html">↓　下载助手</a>
-          <a href="#/overview">◉　总览</a><a href="#/courses">▦　我的课程</a
-          ><a href="#/devices">▣　我的设备</a><a href="#/history">↻　任务记录</a
-          ><a href="#/settings">⚙　设置</a>
-        </nav>
+        ><button id="mobile-menu" class="secondary" aria-controls="workspace-nav" aria-expanded="false">菜单</button>
+        <nav id="workspace-nav" aria-label="我的学习空间">
+<div class="nav-group" role="group" aria-labelledby="nav-group-0"><div class="nav-caption" id="nav-group-0">我的学习空间</div>
+<a class="nav-item" href="#/overview"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>总览</span></a>
+<a class="nav-item" href="#/courses"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5h6a3 3 0 0 1 3 3v13a4 4 0 0 0-4-2H4zM13 8a3 3 0 0 1 3-3h5v14h-4a4 4 0 0 0-4 2"/></svg><span>我的课程</span></a>
+<a class="nav-item" href="/archives.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v12h14V8M9 12h6"/></svg><span>学期存档</span></a>
+<a class="nav-item" href="#/history"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>任务记录</span></a>
+</div>
+<div class="nav-group" role="group" aria-labelledby="nav-group-1"><div class="nav-caption" id="nav-group-1">设置</div>
+<a class="nav-item" href="#/devices"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span>我的设备</span></a>
+<a class="nav-item" href="#/settings"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="9" cy="18" r="2"/></svg><span>设置</span></a>
+</div>
+<div class="nav-group" role="group" aria-labelledby="nav-group-2"><div class="nav-caption" id="nav-group-2">帮助与反馈</div>
+<a class="nav-item" href="/download.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></svg><span>下载助手</span></a>
+<a class="nav-item" href="/help.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3 2.5L12 14m0 3h.01"/></svg><span>常见问题</span></a>
+<a class="nav-item" href="/" id="intro-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10h.01"/></svg><span>关于课巢</span></a>
+</div>
+</nav>
         <div class="sidebar-footer">
           <strong id="account-label"></strong
           ><button id="logout" class="text-button">退出登录</button

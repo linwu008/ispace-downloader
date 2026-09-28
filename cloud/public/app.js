@@ -191,16 +191,25 @@ function route() {
     .querySelectorAll("[data-page]")
     .forEach((n) => (n.hidden = n.dataset.page !== chosen));
   document
-    .querySelectorAll("nav a")
-    .forEach((n) => n.classList.toggle("active", n.hash === "#/" + chosen));
+    .querySelectorAll("#workspace-nav a")
+    .forEach((n) => {
+      const active = n.hash === "#/" + chosen;
+      n.classList.toggle("active", active);
+      if (active) n.setAttribute("aria-current", "page");
+      else n.removeAttribute("aria-current");
+    });
   $("page-title").textContent = names[chosen];
   $("breadcrumb").textContent = "工作空间 / " + names[chosen];
   document.title = names[chosen] + " · BNBU CourseNest";
   $("sidebar").classList.remove("open");
+  $("mobile-menu").setAttribute("aria-expanded", "false");
   if (restoring) window.scrollTo(returnView.x, returnView.y);
 }
 window.addEventListener("hashchange", route);
-$("mobile-menu").onclick = () => $("sidebar").classList.toggle("open");
+$("mobile-menu").onclick = () => {
+  const open = $("sidebar").classList.toggle("open");
+  $("mobile-menu").setAttribute("aria-expanded", String(open));
+};
 $("logout").onclick = async () => {
   try {
     await api("/auth/logout", "POST");
