@@ -1950,13 +1950,20 @@ html[lang="en"] .app-preview .saved {
   .help-page .site-header nav a, .help-page .nav-login { font-size: 13px; }
 }
 
-/* A quiet homepage subtitle; keep the product description visually primary. */
-.home .hero-easter-egg {
-  margin: 12px 0 0;
-  font-size: 13px;
+/* Homepage-only Easter egg, kept with the logo rather than the main copy. */
+.home-brand { min-width: 0; max-width: 260px; }
+.home .brand-easter-egg {
+  margin-top: 7px;
+  font-size: 11px;
   font-weight: 400;
-  line-height: 1.8;
-  letter-spacing: .04em;
+  line-height: 1.5;
+  letter-spacing: .02em;
   color: #9ab6b8;
   text-wrap: balance;
+}
+@media (max-width: 600px) {
+  .home .site-header { height: auto; min-height: 94px; gap: 16px; padding-top: 12px; padding-bottom: 12px; }
+  .home-brand { flex: 1; }
+  .home .brand-easter-egg { max-width: 200px; font-size: 10px; }
+  .home .nav-login { flex-shrink: 0; }
 }
