@@ -1980,3 +1980,21 @@ html[lang="en"] .app-preview .saved {
   .home .brand-easter-egg { margin-left: 41px; letter-spacing: .04em; }
   .home .nav-login { flex-shrink: 0; }
 }
+
+/* Keep homepage navigation centered independently of the brand width. */
+@media (min-width: 621px) {
+  .home .site-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    column-gap: 24px;
+  }
+  .home .site-header nav { justify-self: center; }
+  .home .nav-login { justify-self: end; }
+  .home-brand { flex-direction: column; align-items: flex-start; gap: 5px; }
+  .home .brand-easter-egg { margin-left: 50px; padding-left: 0; border: 0; font-size: 10px; line-height: 1.6; }
+}
+@media (min-width: 621px) and (max-width: 800px) {
+  .home .site-header { grid-template-columns: minmax(0, 1fr) auto; row-gap: 16px; }
+  .home .site-header nav { grid-column: 1 / -1; grid-row: 2; }
+  .home .nav-login { grid-column: 2; grid-row: 1; }
+}
