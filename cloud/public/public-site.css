@@ -1990,8 +1990,6 @@ html[lang="en"] .app-preview .saved {
   }
   .home .site-header nav { justify-self: center; }
   .home .nav-login { justify-self: end; }
-  .home-brand { flex-direction: column; align-items: flex-start; gap: 5px; }
-  .home .brand-easter-egg { margin-left: 50px; padding-left: 0; border: 0; font-size: 10px; line-height: 1.6; }
 }
 @media (min-width: 621px) and (max-width: 800px) {
   .home .site-header { grid-template-columns: minmax(0, 1fr) auto; row-gap: 16px; }
