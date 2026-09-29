@@ -1949,3 +1949,14 @@ html[lang="en"] .app-preview .saved {
   .help-page .site-header nav { display: flex; }
   .help-page .site-header nav a, .help-page .nav-login { font-size: 13px; }
 }
+
+/* A quiet homepage subtitle; keep the product description visually primary. */
+.home .hero-easter-egg {
+  margin: 12px 0 0;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.8;
+  letter-spacing: .04em;
+  color: #9ab6b8;
+  text-wrap: balance;
+}
