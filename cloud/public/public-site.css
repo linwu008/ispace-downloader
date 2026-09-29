@@ -1950,20 +1950,33 @@ html[lang="en"] .app-preview .saved {
   .help-page .site-header nav a, .help-page .nav-login { font-size: 13px; }
 }
 
-/* Homepage-only Easter egg, kept with the logo rather than the main copy. */
-.home-brand { min-width: 0; max-width: 260px; }
+/* A quiet two-line inscription beside the brand, separate from navigation. */
+.home-brand {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  min-width: 0;
+}
+.home-brand .wordmark { flex-shrink: 0; }
 .home .brand-easter-egg {
-  margin-top: 7px;
+  margin: 0;
+  padding-left: 20px;
+  border-left: 1px solid #b2e9e033;
+  font-family: var(--serif);
   font-size: 11px;
   font-weight: 400;
-  line-height: 1.5;
-  letter-spacing: .02em;
-  color: #9ab6b8;
-  text-wrap: balance;
+  line-height: 1.9;
+  letter-spacing: .08em;
+  color: #9db8b9;
 }
-@media (max-width: 600px) {
-  .home .site-header { height: auto; min-height: 94px; gap: 16px; padding-top: 12px; padding-bottom: 12px; }
-  .home-brand { flex: 1; }
-  .home .brand-easter-egg { max-width: 200px; font-size: 10px; }
+.brand-easter-egg span { display: block; white-space: nowrap; }
+@media (max-width: 1100px) {
+  .home-brand { flex-direction: column; align-items: flex-start; gap: 5px; }
+  .home .site-header { height: auto; min-height: 108px; padding-top: 14px; padding-bottom: 14px; }
+  .home .brand-easter-egg { margin-left: 50px; padding-left: 0; border: 0; font-size: 10px; line-height: 1.6; }
+}
+@media (max-width: 620px) {
+  .home .site-header { gap: 16px; min-height: 108px; }
+  .home .brand-easter-egg { margin-left: 41px; letter-spacing: .04em; }
   .home .nav-login { flex-shrink: 0; }
 }
