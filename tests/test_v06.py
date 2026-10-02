@@ -94,7 +94,7 @@ def test_plan_migrates_once_and_preserves_time(setup,monkeypatch):
 def test_network_interrupt_unblocks_waiting_socket():
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
     from ispace.moodle import Moodle
-    started=threading.Event();release=threading.Event()
+    started=threading.Event();release=threading.Event();reading=threading.Event()
     class Handler(BaseHTTPRequestHandler):
         def log_message(self,*args):pass
         def do_GET(self):
@@ -107,13 +107,14 @@ def test_network_interrupt_unblocks_waiting_socket():
     def download():
         try:
             response=platform.request('GET',platform.base+'/file')
+            reading.set()
             for chunk in response.iter_bytes():pass
         except (Exception, Cancelled):pass
         finally:ended.set()
     thread=threading.Thread(target=download);thread.start()
     try:
         assert started.wait(3)
-        time.sleep(.05)
+        assert reading.wait(3), 'response must be registered before testing an active read'
         platform.interrupt()
         assert ended.wait(3), 'cancel must unblock the active network read'
     finally:
