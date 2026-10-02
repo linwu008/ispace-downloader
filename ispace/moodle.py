@@ -82,13 +82,19 @@ class Discovery:
 
 def browser_login(vault, username=None, password=None, manual=False):
     from playwright.sync_api import sync_playwright, TimeoutError as BrowserTimeout, Error as BrowserError
+    from . import desktop
+    desktop.prepare_browser()
     with sync_playwright() as engine:
         launch_options = {"headless": not manual}
-        if not Path(engine.chromium.executable_path).exists():
+        if desktop.is_macos():
+            launch_options["channel"] = "chromium"
+        if not desktop.is_macos() and not Path(engine.chromium.executable_path).exists():
             launch_options["channel"] = "msedge"
         try:
             browser = engine.chromium.launch(**launch_options)
         except BrowserError:
+            if desktop.is_macos():
+                raise ValueError("无法启动登录浏览器，请重新安装完整的 Mac 助手；源码运行请安装 Playwright Chromium") from None
             if launch_options.get("channel") == "msedge":
                 raise
             browser = engine.chromium.launch(**{**launch_options, "channel": "msedge"})
@@ -392,6 +398,9 @@ class Moodle:
 
 
 def safe_error(exc):
+    from keyring.errors import KeyringError
+    if isinstance(exc, KeyringError):
+        return "无法访问系统凭据存储，请允许钥匙串或凭据访问后重新尝试登录"
     if isinstance(exc, (LoginRequired, ResourceError, ValueError)):
         return str(exc)
     if isinstance(exc, httpx.HTTPStatusError):

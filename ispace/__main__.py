@@ -11,6 +11,8 @@ def main():
     serve = sub.add_parser("serve")
     serve.add_argument("--port", type=int, default=8765)
     sub.add_parser("sync")
+    diagnostic = sub.add_parser("browser-check", help="Offline bundled-browser diagnostic")
+    diagnostic.add_argument("--report", type=Path, required=True)
     schedule = sub.add_parser("schedule")
     schedule.add_argument("--time", default="20:00")
     schedule.add_argument("--disable", action="store_true")
@@ -30,6 +32,9 @@ def main():
             raise SystemExit(0 if result["status"] == "success" else 1)
         except BusyError:
             print("已有同步任务正在运行，本次跳过")
+    elif args.command == "browser-check":
+        from .browser_check import check
+        check(args.report)
     else:
         from .scheduler import configure
         configure(Store(data_dir()), not args.disable, args.time)

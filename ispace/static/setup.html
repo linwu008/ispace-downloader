@@ -18,7 +18,7 @@
       <section class="card"><h2>保存位置</h2><p id="folder-summary">首次使用请选择总目录或逐课程设置。</p><button id="folder-mode">设置 / 更改保存位置</button><p>支持选择文件夹或粘贴完整路径。迁移仅处理助手记录的课程文件。</p></section>
       <dialog id="folder-dialog"><h2>设置保存位置</h2><form id="folder-form">
         <label>设置方式<select id="folder-kind"><option value="root">统一总目录（自动按课程整理）</option><option value="individual">每门课程单独设置</option><option value="course" hidden>当前课程</option></select></label>
-        <label>完整路径<input id="folder-path" placeholder="例如 D:\学习资料" maxlength="2000" /></label>
+        <label>完整路径<input id="folder-path" placeholder="请输入完整的文件夹路径" maxlength="2000" /></label>
         <button type="button" id="browse-folder">浏览选择文件夹</button><button type="button" id="check-folder">检查路径</button>
         <label>更换目录时<select id="folder-migrate"><option value="false">仅后续下载使用新目录，旧文件保留</option><option value="true">同时迁移已下载文件（同名不同内容保留两份）</option></select></label>
         <p id="folder-status" role="status"></p><button type="submit">保存设置</button><button type="button" id="close-folder">关闭</button>
@@ -49,6 +49,6 @@
         <button id="disconnect">断开当前配对</button>
       </section>
       <p>设置完成后可以关闭此页面，保持助手在后台运行。</p>
-    <section class="card"><h2>助手更新与提示</h2><p id="update-state"></p><button id="update-check">检查更新</button><button id="update-install">升级助手</button><label><input type="checkbox" id="auto-update" />自动下载安装（空闲时）</label><label><input type="checkbox" id="desktop-prompts" />电脑显示待执行任务提示</label><p id="pending-state"></p><div id="pending-actions"></div></section></main>
+    <section class="card"><h2>助手更新与提示</h2><p id="update-state"></p><button id="update-check">检查更新</button><button id="update-install">升级助手</button><a id="update-download" hidden target="_blank" rel="noopener">下载新版</a><label><input type="checkbox" id="auto-update" />自动下载安装（空闲时）</label><label><input type="checkbox" id="desktop-prompts" />电脑显示待执行任务提示</label><p id="pending-state"></p><div id="pending-actions"></div></section></main>
   </body>
 </html>

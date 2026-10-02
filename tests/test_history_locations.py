@@ -107,7 +107,7 @@ def test_location_api_rechecks_before_opening_explorer(setup, monkeypatch):
     event_id = store.history()['events'][0]['id']
     app = create_app(store)
     calls = []
-    monkeypatch.setattr('ispace.web.subprocess.Popen', lambda args: calls.append(args))
+    monkeypatch.setattr('ispace.desktop.subprocess.Popen', lambda args: calls.append(args))
     with TestClient(app, base_url='http://127.0.0.1:8765') as client:
         headers = {'X-iSpace-Token': client.get('/api/state').json()['csrf']}
         response = client.get(f'/api/events/{event_id}/location')
@@ -115,7 +115,7 @@ def test_location_api_rechecks_before_opening_explorer(setup, monkeypatch):
         assert client.get('/api/events/999999/location').status_code == 400
         assert client.post(f'/api/events/{event_id}/locate').status_code == 403
         assert client.post(f'/api/events/{event_id}/locate', headers=headers).status_code == 200
-        assert calls == [['explorer.exe', '/select,', response.json()['path']]]
+        assert calls == [(['/usr/bin/open', '-R'] if __import__('sys').platform == 'darwin' else ['explorer.exe', '/select,']) + [response.json()['path']]]
         Path(response.json()['path']).unlink()
         assert client.post(f'/api/events/{event_id}/locate', headers=headers).status_code == 400
         assert len(calls) == 1
