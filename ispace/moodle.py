@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import time
+import threading
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -142,12 +143,18 @@ def browser_login(vault, username=None, password=None, manual=False):
 class Moodle:
     def __init__(self, state=None, base=BASE, transport=None):
         self.base = base.rstrip("/")
+        self._interrupted = threading.Event()
         cookies = httpx.Cookies()
         for cookie in (state or {}).get("cookies", []):
             cookies.set(cookie["name"], cookie["value"], domain=cookie.get("domain", ""), path=cookie.get("path", "/"))
         self.client = httpx.Client(cookies=cookies, transport=transport, trust_env=False, timeout=httpx.Timeout(60, connect=20), headers={"User-Agent": "iSpaceDownloader/0.2 (personal course backup)", "Accept-Encoding": "identity"})
 
     def interrupt(self):
+        self._interrupted.set()
+        self._shutdown_active_socket()
+        self.client.close()
+
+    def _shutdown_active_socket(self):
         response = getattr(self, '_active_response', None)
         if response is not None:
             stream = response.extensions.get('network_stream')
@@ -158,7 +165,6 @@ class Moodle:
                     if connection: connection.shutdown(socket.SHUT_RDWR)
             except OSError:
                 pass
-        self.client.close()
 
     def close(self):
         self.client.close()
@@ -168,8 +174,10 @@ class Moodle:
         return target.scheme == base.scheme and target.netloc == base.netloc
 
     def request(self, method, url, **kwargs):
-        from .cancellation import check
+        from .cancellation import check, Cancelled
         check()
+        if self._interrupted.is_set():
+            raise Cancelled()
         url = urljoin(self.base + "/", url)
         for _ in range(8):
             if not self.allowed(url):
@@ -178,6 +186,12 @@ class Moodle:
                 raise LoginRequired("登录状态已过期，请重新登录")
             response = self.client.send(self.client.build_request(method, url, **kwargs), stream=True)
             self._active_response = response
+            # Cancellation can arrive while send() is still returning headers.
+            # A socket not yet registered by interrupt() must not start a read.
+            if self._interrupted.is_set():
+                self._shutdown_active_socket()
+                response.close()
+                raise Cancelled()
             check()
             if response.is_redirect:
                 location = response.headers.get("location")

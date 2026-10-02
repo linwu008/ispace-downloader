@@ -20,6 +20,10 @@ def main():
     from PIL import Image
     from ispace import __version__
     import playwright
+    import cryptography.hazmat.bindings._rust as rust
+    dependencies = subprocess.check_output(['/usr/bin/otool', '-L', rust.__file__], text=True)
+    if any('/libssl.' in line or '/libcrypto.' in line for line in dependencies.splitlines()[1:]):
+        raise SystemExit('cryptography must statically link OpenSSL for packaging. Reinstall with OPENSSL_STATIC=1 and --no-cache-dir --no-binary=cryptography; see docs/MACOS-ASSISTANT.md.')
     run(sys.executable, ROOT / 'scripts/sync_shared_assets.py')
     (ROOT / 'build').mkdir(exist_ok=True)
     with Image.open(ROOT / 'ispace/static/logo.png') as logo:

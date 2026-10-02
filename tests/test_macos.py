@@ -139,3 +139,23 @@ def test_mac_api_rejects_install_and_schedule_but_keeps_settings(mac):
 def test_notification_failure_does_not_interrupt_worker(mac, monkeypatch):
     monkeypatch.setattr(desktop, 'applescript', Mock(side_effect=OSError('unavailable')))
     desktop.notify(Mock(), 'Test message')
+
+
+def test_cancel_before_response_is_registered_never_reads_body():
+    from ispace.moodle import Moodle
+    from ispace.cancellation import Cancelled
+    class NeverRead(httpx.SyncByteStream):
+        closed = False
+        def __iter__(self):
+            raise AssertionError('canceled response must not be read')
+        def close(self):
+            self.closed = True
+    stream = NeverRead()
+    def headers_arrive(request):
+        # Deterministically reproduce cancel between send() and registration.
+        client.interrupt()
+        return httpx.Response(200, stream=stream)
+    client = Moodle(transport=httpx.MockTransport(headers_arrive))
+    with pytest.raises(Cancelled):
+        client.request('GET', '/fixture')
+    assert stream.closed

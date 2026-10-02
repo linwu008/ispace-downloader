@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from test_companion import setup
 from ispace import catalog, folders
-from ispace.cancellation import check
+from ispace.cancellation import check, Cancelled
 
 
 def downloaded(setup):
@@ -108,7 +108,7 @@ def test_network_interrupt_unblocks_waiting_socket():
         try:
             response=platform.request('GET',platform.base+'/file')
             for chunk in response.iter_bytes():pass
-        except Exception:pass
+        except (Exception, Cancelled):pass
         finally:ended.set()
     thread=threading.Thread(target=download);thread.start()
     try:
