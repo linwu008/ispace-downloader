@@ -54,7 +54,8 @@ def main():
     try:
         response = httpx.get(url + '/api/state', timeout=2, trust_env=False)
         if response.status_code == 200 and response.json().get('version') == __version__:
-            open_ui()
+            if os.environ.get("COURSENEST_NO_BROWSER") != "1":
+                open_ui()
             return
         alert('本机 8765 端口已有其他版本运行，请先关闭旧版助手，再启动 CourseNest。')
         return

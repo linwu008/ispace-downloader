@@ -14,7 +14,16 @@ mac = sys.platform == 'darwin'
 package = root / ('dist/CourseNestHelper.app/Contents' if mac else 'dist/CourseNestHelper/_internal')
 assert not list((package/'ispace').rglob('*.py')), 'Do not distribute project source files'
 fixture = Path(tempfile.mkdtemp(prefix='coursenest-bundle-'))
-exe = root / ('dist/CourseNestHelper.app/Contents/MacOS/CourseNestHelper' if mac else 'dist/CourseNestHelper/CourseNestHelper.exe')
+exe = root / 'dist/CourseNestHelper/CourseNestHelper.exe'
+if mac:
+    import platform
+    from ispace import __version__
+    archive = root / f'dist/CourseNestHelper-{__version__}-macos-{platform.machine()}.zip'
+    installed = fixture / 'Applications'
+    subprocess.run(['/usr/bin/ditto', '-x', '-k', str(archive), str(installed)], check=True)
+    bundle = installed / 'CourseNestHelper.app'
+    subprocess.run(['/usr/bin/codesign', '--verify', '--deep', '--strict', str(bundle)], check=True)
+    exe = bundle / 'Contents/MacOS/CourseNestHelper'
 process = subprocess.Popen([str(exe), '-m', 'ispace', '--data-dir', str(fixture), 'serve', '--port', '18768'],
                            cwd=fixture, env={**os.environ,'COURSENEST_NO_BROWSER':'1'},
                            creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
