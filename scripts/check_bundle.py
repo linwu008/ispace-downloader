@@ -1,5 +1,7 @@
 """Smoke-test the actual frozen EXE on an isolated port and database."""
 import os
+import sys
+import json
 import subprocess
 import tempfile
 import time
@@ -8,9 +10,11 @@ from pathlib import Path
 import httpx
 
 root = Path(__file__).resolve().parent.parent
-assert not list((root/'dist/CourseNestHelper/_internal/ispace').rglob('*.py')), 'Do not distribute project source files'
+mac = sys.platform == 'darwin'
+package = root / ('dist/CourseNestHelper.app/Contents' if mac else 'dist/CourseNestHelper/_internal')
+assert not list((package/'ispace').rglob('*.py')), 'Do not distribute project source files'
 fixture = Path(tempfile.mkdtemp(prefix='coursenest-bundle-'))
-exe = root/'dist/CourseNestHelper/CourseNestHelper.exe'
+exe = root / ('dist/CourseNestHelper.app/Contents/MacOS/CourseNestHelper' if mac else 'dist/CourseNestHelper/CourseNestHelper.exe')
 process = subprocess.Popen([str(exe), '-m', 'ispace', '--data-dir', str(fixture), 'serve', '--port', '18768'],
                            cwd=fixture, env={**os.environ,'COURSENEST_NO_BROWSER':'1'},
                            creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
@@ -34,6 +38,18 @@ try:
         assert client.get('/api/updates').status_code==200
         assert client.post('/api/companion/disconnect').status_code==403
         assert (fixture/'index-pre-v0.4.sqlite3').is_file()
-        print('PASS frozen Windows EXE: isolated database, static UI, companion API, CSRF, backup and scheduled-task argument compatibility.')
+        if mac:
+            assert state['platform'] == 'macos'
+            assert client.get('/api/updates').json()['mode'] == 'manual'
+        print('PASS frozen helper: isolated database, static UI, companion API, CSRF, backup and scheduled-task argument compatibility.')
 finally:
     process.terminate();process.wait(timeout=15)
+
+if mac:
+    report = fixture / 'browser-check.json'
+    subprocess.run([str(exe), 'browser-check', '--report', str(report)], cwd=fixture,
+                   env={**os.environ, 'ISPACE_DATA_DIR': str(fixture), 'PATH': '/usr/bin:/bin', 'PLAYWRIGHT_BROWSERS_PATH': '/nonexistent'},
+                   timeout=120, check=True)
+    result = json.loads(report.read_text())
+    assert result['automatic_login'] and result['visible_login']
+    print('PASS bundled Chromium: automatic fixture login and visible session restoration without system browser or Python.')
