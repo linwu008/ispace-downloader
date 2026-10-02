@@ -152,7 +152,9 @@ class Moodle:
     def interrupt(self):
         self._interrupted.set()
         self._shutdown_active_socket()
-        self.client.close()
+        # Keep the descriptor alive until the reader observes shutdown. Closing
+        # it from another thread can leave macOS's timed socket read waiting on
+        # an invalid descriptor. The owning service closes the client in finally.
 
     def _shutdown_active_socket(self):
         response = getattr(self, '_active_response', None)
