@@ -50,3 +50,14 @@ python3.13 -m venv .venv
 ## 卸载
 
 先在菜单栏关闭登录后启动，再退出并移除应用。保留课程和账号数据以便重装；若应用已移除，可手动移除 `~/Library/LaunchAgents/cn.bnbucoursenest.helper.plist`。
+
+## 本次本机验收记录（2026-10-02）
+
+Apple Silicon / macOS 27.0.1 / Python 3.13：147 项 Python 测试通过、2 项 Windows 专用测试跳过；32 项云端测试通过；v3、v4、v5、v6、v7、public、v1 七组浏览器回归通过。
+从生成 ZIP 解压后通过 `codesign --verify --deep --strict`、包内本地服务及 Chromium 模拟登录（无头与可见窗口）检查。使用独立随机服务名完成真实 Keychain 写入、读取、删除，不接触已有学校凭据。冻结后的 GUI 启动器提供本地设置页，重复启动使用同一服务。
+
+尚未完成的人工验收：菜单栏逐项点击与正常退出、真实登录会话中的登录启动、系统权限拒绝、外置盘断开及真实学校账号同步。原生 UI 自动化接口超时，不能将这些项目记为通过。Intel 与 Windows 的结果以 PR 所链接的原生 CI 为准；Developer ID 签名、公证需要维护者证书。
+
+![双架构下载页（英文）](screenshots/macos-download.png)
+
+![Mac 设置页：仅检查更新，未发布时无下载入口](screenshots/macos-update.png)
