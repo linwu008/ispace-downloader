@@ -34,7 +34,7 @@ async function showEventLocation(eventId){
   }catch(error){if(request===locationRequest)$('location-note').textContent=error.message;}
 }
 $('locate-task-file').onclick=async()=>{
-  try{await api(`/events/${locationEvent}/locate`,'POST');$('location-note').textContent='已在资源管理器中定位该文件。';}
+  try{await api(`/events/${locationEvent}/locate`,'POST');$('location-note').textContent='已在文件管理器中定位该文件。';}
   catch(error){$('location-note').textContent=error.message;}
 };
 $('task-location-dialog').addEventListener('close',()=>{locationRequest++;locationEvent=null;});

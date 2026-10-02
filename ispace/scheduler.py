@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from . import desktop
 import re
 import subprocess
 import sys
@@ -41,8 +42,12 @@ def task_xml(clock, directory, identity, current=None):
 
 def configure(store, enabled, clock):
     next_run(clock)
-    if os.name != "nt":
-        raise ValueError("每日自动检查使用 Windows 任务计划程序")
+    if desktop.is_macos() or os.name != "nt":
+        if not enabled:
+            store.set("schedule_enabled", False)
+            store.set("schedule_time", clock)
+            return
+        raise ValueError("每日同步计划请在官网设置，并保持助手运行")
     flags = subprocess.CREATE_NO_WINDOW
     if enabled:
         identity = subprocess.run(["whoami"], capture_output=True, text=True, check=True, creationflags=flags).stdout.strip()

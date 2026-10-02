@@ -30,16 +30,24 @@ if not match or match[1] != public:
         "Signing key does not match the client verification key. Release stopped."
     )
 from ispace import __version__
-package = root / "dist" / f"CourseNestHelper-{__version__}-windows-x64.zip"
-if package.exists():
-    meta = {
-        "version": __version__,
-        "url": f"https://github.com/linwu008/coursenest-releases/releases/download/v{__version__}/{package.name}",
-        "sha256": hashlib.sha256(package.read_bytes()).hexdigest(),
-    }
-    payload = json.dumps(meta, sort_keys=True, separators=(",", ":")).encode()
-    meta["signature"] = base64.b64encode(key.sign(payload)).decode()
-    (root / "dist" / f"release-{__version__}.json").write_text(
-        json.dumps(meta, indent=2), "utf-8"
-    )
-print("Public verification key prepared; private signing key remains local.")
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--platform', choices=['windows', 'macos'], default='windows')
+parser.add_argument('--arch', choices=['x64', 'arm64', 'x86_64'])
+args = parser.parse_args()
+arch = args.arch or ('x64' if args.platform == 'windows' else None)
+if (args.platform == 'windows' and arch != 'x64') or (args.platform == 'macos' and arch not in ('arm64', 'x86_64')):
+    raise SystemExit('Select a supported platform and architecture')
+package = root / 'dist' / f'CourseNestHelper-{__version__}-{args.platform}-{arch}.zip'
+if not package.is_file():
+    raise SystemExit(f'Missing package: {package}')
+meta = {
+    'version': __version__,
+    'url': f'https://github.com/linwu008/coursenest-releases/releases/download/v{__version__}/{package.name}',
+    'sha256': hashlib.sha256(package.read_bytes()).hexdigest(),
+}
+payload = json.dumps(meta, sort_keys=True, separators=(',', ':')).encode()
+meta['signature'] = base64.b64encode(key.sign(payload)).decode()
+suffix = '' if args.platform == 'windows' else f'-macos-{arch}'
+(root / 'dist' / f'release-{__version__}{suffix}.json').write_text(json.dumps(meta, indent=2), 'utf-8')
+print('Release metadata signed; private signing key remains local.')

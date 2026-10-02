@@ -16,6 +16,7 @@ import zipfile
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlsplit
 import httpx
+from . import desktop
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 # Public verification key is populated by the release preparation script.
@@ -164,8 +165,9 @@ def preferred_executable(data_dir, current_version):
 class Updater:
     def __init__(self, store, service):
         self.store, self.service = store, service
+        self.manual = desktop.is_macos()
         self.meta = None
-        self.state = {"status": "idle", "message": "自动检查更新；点击后升级"}
+        self.state = {"status": "idle", "message": "检查更新后下载新版，退出助手并替换应用" if self.manual else "自动检查更新；点击后升级"}
         self.companion = None
         receipt = self.store.directory / "update-rollback.txt"
         self.failed_version = (
@@ -186,9 +188,22 @@ class Updater:
         from . import __version__
 
         try:
-            r = httpx.get(ORIGIN + "/api/v07/update", timeout=15, trust_env=False)
+            endpoint = ORIGIN + "/api/v07/update"
+            if self.manual:
+                target = desktop.identity()
+                endpoint += "?platform=macos&arch=" + target["arch"]
+            r = httpx.get(endpoint, timeout=15, trust_env=False)
             r.raise_for_status()
             meta = r.json()
+            self.meta = None
+            if self.manual:
+                if meta.get("available") is False or meta.get("platform") != "macos":
+                    self.state = {"status": "unpublished", "message": "此 Mac 架构的安装包尚未发布"}
+                    return self.state
+                verify(meta)
+                expected = f"CourseNestHelper-{meta['version']}-macos-{desktop.identity()['arch']}.zip"
+                if urlsplit(meta["url"]).path.rsplit("/", 1)[-1] != expected:
+                    raise ValueError("更新包平台或架构不匹配")
             if version(meta["version"]) <= version(__version__):
                 self.state = {
                     "status": "current",
@@ -205,6 +220,7 @@ class Updater:
                 "status": "available",
                 "version": meta["version"],
                 "required": required,
+                **({"download_url": meta["url"], "sha256": meta["sha256"]} if self.manual else {}),
                 "message": ("需要升级：" if required else "可选更新：")
                 + str(meta.get("reason", "新增电脑功能"))
                 + "；配对、目录和文件保留",
@@ -221,6 +237,8 @@ class Updater:
         return self.state
 
     def install(self):
+        if self.manual:
+            raise ValueError("Mac 请下载新版，退出助手后替换应用；配置和文件保留")
         if not self.lock.acquire(blocking=False):
             raise ValueError("更新正在准备中")
         try:
@@ -323,6 +341,7 @@ class Updater:
             self.check()
             if (
                 self.state["status"] == "available"
+                and not self.manual
                 and self.store.setting("auto_update", False)
                 and not self.service.busy()
             ):

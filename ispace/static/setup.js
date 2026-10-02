@@ -43,11 +43,11 @@ node("folder-form").onsubmit=e=>{e.preventDefault();act(async()=>{
   const submit=e.submitter;submit.disabled=true;node("folder-status").textContent="正在保存，请稍候…";
   try{const r=await call("/folders/configure","POST",{mode:node("folder-kind").value,course_id:editingCourse?.id,folder:node("folder-path").value,migrate:node("folder-migrate").value==="true"});node("folder-dialog").close();node("message").textContent="目录设置成功。"+(r.moved?"已迁移 "+r.moved+" 个文件。":"")+(r.retained?"部分原文件被占用，已保留原件。":"");await refresh();}finally{submit.disabled=false;}
 },"folder-status");};
-node("pair").onsubmit=e=>{e.preventDefault();act(async()=>{await call("/companion/pair","POST",{server:"https://bnbucoursenest.cn",code:node("code").value,name:"我的 Windows 电脑"});node("code").value="";await refresh();});};
+node("pair").onsubmit=e=>{e.preventDefault();act(async()=>{await call("/companion/pair","POST",{server:"https://bnbucoursenest.cn",code:node("code").value,name:localState?.platform==="macos"?"我的 Mac":"我的 Windows 电脑"});node("code").value="";await refresh();});};
 node("login").onclick=()=>act(async()=>{await call("/login/manual","POST");node("message").textContent="请在弹出的学校窗口完成登录。";});
 node("refresh").onclick=()=>act(async()=>{await call("/courses/refresh","POST");node("message").textContent="正在读取学校课程…";});
 node("disconnect").onclick=()=>act(async()=>{if(confirm("断开这台电脑与官网的连接？本地文件保留。")){await call("/companion/disconnect","POST");await refresh();}});
-act(refresh);setInterval(()=>{if(!document.hidden)act(refresh);},5000);
+act(async()=>{await refresh();await updatePanel();});setInterval(()=>{if(!document.hidden)act(refresh);},5000);
 
 node('update-check').onclick=()=>act(async()=>{await call('/updates/check','POST');await updatePanel();});
 node('update-install').onclick=()=>act(async()=>{await call('/updates/install','POST');node('update-state').textContent='正在准备更新，当前版本会保留。';});
@@ -55,6 +55,8 @@ node('auto-update').onchange=()=>act(()=>call('/updates/automatic','PUT',{enable
 node('desktop-prompts').onchange=()=>act(()=>call('/confirmations/enabled','PUT',{enabled:node('desktop-prompts').checked}));
 async function updatePanel(){
  const u=await call('/updates');node('update-state').textContent='助手版本 '+u.current+' · '+u.message;node('update-install').disabled=u.status!=='available'||localState?.busy;node('auto-update').checked=u.automatic;
+ const manual=u.mode==='manual';node('update-install').hidden=manual;node('auto-update').parentElement.hidden=manual;
+ const link=node('update-download');link.hidden=!manual||u.status!=='available'||!u.download_url;if(!link.hidden)link.href=u.download_url;else link.removeAttribute('href');
  const p=await call('/confirmations');node('desktop-prompts').checked=p.enabled;node('pending-state').textContent=p.items.length?'待确认任务：'+p.items.length:'暂无待确认任务';node('pending-actions').replaceChildren();
  const ready=p.items.filter(i=>i.ready);
  if(ready.length){const b=document.createElement('button');b.textContent='确认开始执行';b.onclick=()=>act(async()=>{await call('/confirmations','POST',{ids:ready.map(j=>j.id),action:'confirm'});await updatePanel();});node('pending-actions').append(b);}

@@ -44,7 +44,7 @@
       "从注册到第一次同步",
       `<ol>
       <li><b>创建课巢账号</b><p>填写自己的邮箱、8–128 位密码与邀请码。课巢账号和学校账号独立。</p></li>
-      <li><b>下载并启动电脑助手</b><p>支持 Windows 10/11 x64，需要 Edge，无需 Python。完整解压 ZIP，保留 _internal 文件夹，再运行 CourseNestHelper.exe。</p><a href="/download.html">下载 Windows 助手 ↗</a></li>
+      <li><b>下载并启动电脑助手</b><p>Windows 10/11 x64 需要 Edge，解压后运行 CourseNestHelper.exe；Mac 将 CourseNestHelper.app 拖入 Applications 后打开。无需安装 Python。</p><a href="/download.html">下载电脑助手 ↗</a></li>
       <li><b>配对你的电脑</b><p>登录官网，在“我的设备”生成配对码，输入电脑设置。请使用同一官网生成的有效配对码。</p></li>
       <li><b>连接学校与设置目录</b><p>在电脑设置完成学校登录，选择统一总目录或逐课程目录，也可粘贴完整路径。</p></li>
       <li><b>回到官网，开始同步</b><p>选择课程与文件，统一设置每日计划。手机可提交任务；电脑开机联网、助手准备好并确认后执行下载。</p></li>

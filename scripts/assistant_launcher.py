@@ -1,4 +1,4 @@
-"""Windows tray launcher; also accepts the existing scheduled-task CLI arguments."""
+"""Desktop tray launcher; also accepts the existing scheduled-task CLI arguments."""
 import multiprocessing
 import os
 import sys
@@ -8,14 +8,19 @@ import webbrowser
 from pathlib import Path
 
 
-def alert(message):
-    import ctypes
-    ctypes.windll.user32.MessageBoxW(None, message, 'BNBU CourseNest', 0x40)
+from ispace import desktop
+
+alert = desktop.alert
 
 
 def main():
     multiprocessing.freeze_support()
-    os.environ.setdefault('ISPACE_DATA_DIR', str(Path(os.environ['LOCALAPPDATA']) / 'BNBUCourseNest'))
+    os.environ.setdefault('ISPACE_DATA_DIR', str(desktop.default_data_dir()))
+    login_start = sys.argv[1:] == ['--login-start']
+    if login_start:
+        sys.argv = sys.argv[:1]
+        os.environ['COURSENEST_NO_BROWSER'] = '1'
+    desktop.prepare_browser()
     if len(sys.argv) > 1:
         # Windows Task Scheduler uses the same -m ispace arguments as Python.
         if sys.argv[1:3] == ['-m', 'ispace']:
@@ -33,7 +38,7 @@ def main():
     from ispace import __version__
     from ispace.updater import preferred_executable
     candidate = preferred_executable(os.environ['ISPACE_DATA_DIR'], __version__)
-    if getattr(sys, 'frozen', False) and candidate:
+    if not desktop.is_macos() and getattr(sys, 'frozen', False) and candidate:
         import subprocess
         subprocess.Popen([str(candidate)], creationflags=subprocess.CREATE_NO_WINDOW)
         return
@@ -49,7 +54,8 @@ def main():
     try:
         response = httpx.get(url + '/api/state', timeout=2, trust_env=False)
         if response.status_code == 200 and response.json().get('version') == __version__:
-            open_ui()
+            if os.environ.get("COURSENEST_NO_BROWSER") != "1":
+                open_ui()
             return
         alert('本机 8765 端口已有其他版本运行，请先关闭旧版助手，再启动 CourseNest。')
         return
@@ -79,25 +85,12 @@ def main():
         import ispace
         picture = Image.open(Path(ispace.__file__).parent / 'static' / 'logo.png').convert('RGBA').resize((64,64))
     except OSError: pass
-    def autorun_enabled(item=None):
-        import winreg
-        try:
-            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\Microsoft\Windows\CurrentVersion\Run') as key:
-                return winreg.QueryValueEx(key, 'BNBUCourseNest')[0] == '"' + sys.executable + '"'
-        except OSError:
-            return False
     def toggle_autorun(icon, item):
-        import winreg
-        enabled = autorun_enabled()
         try:
-            with winreg.CreateKey(winreg.HKEY_CURRENT_USER, r'Software\Microsoft\Windows\CurrentVersion\Run') as key:
-                if enabled:
-                    winreg.DeleteValue(key, 'BNBUCourseNest')
-                else:
-                    winreg.SetValueEx(key, 'BNBUCourseNest', 0, winreg.REG_SZ, '"' + sys.executable + '"')
+            desktop.set_autorun(not desktop.autorun_enabled())
             icon.update_menu()
-        except OSError:
-            alert('无法修改登录后启动设置，请稍后重试。')
+        except (OSError, ValueError):
+            alert('无法修改登录后启动设置。Mac 请先将应用移到 Applications 文件夹。')
     def quit_app(icon, item):
         try:
             with app.state.companion.lock(), app.state.service.lock():
@@ -109,7 +102,8 @@ def main():
     tray = pystray.Icon('BNBUCourseNest', picture, 'BNBU CourseNest · v'+__version__, pystray.Menu(
         pystray.MenuItem('打开官网', open_ui, default=True),
         pystray.MenuItem('电脑设置', lambda icon,item:webbrowser.open(url+'/')),
-        pystray.MenuItem('Windows 登录后启动', toggle_autorun, checked=autorun_enabled),
+        pystray.MenuItem('登录后启动', toggle_autorun, checked=lambda item: desktop.autorun_enabled()),
+        pystray.MenuItem(lambda item: '待确认任务：' + str(len(app.state.companion.pending)), lambda icon, item: webbrowser.open(url+'/')),
         pystray.MenuItem('退出同步助手', quit_app)))
     if os.environ.get('COURSENEST_NO_BROWSER') != '1':
         open_ui()
@@ -130,7 +124,8 @@ def main():
             if pending:
                 seen.update(p['id'] for p in pending)
                 store.set('notified_jobs', sorted(seen)[-500:])
-                tray.notify('电脑已准备好。打开官网或电脑设置确认任务；可在助手设置关闭电脑提示。', 'CourseNest')
+                desktop.notify(tray, '电脑已准备好。打开官网或电脑设置确认任务；可在助手设置关闭电脑提示。')
+            desktop.refresh_menu(tray)
     threading.Thread(target=notify_pending, daemon=True).start()
     try:
         tray.run()

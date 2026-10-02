@@ -49,18 +49,23 @@ async function initialize() {
   }
   const feature = root.querySelector("[data-feature]")?.dataset.feature || document.body.dataset.feature;
   if (feature === "download") {
-    const h = await api("/helper");
+    const targets = [["Windows", ""], ["Mac · Apple Silicon", "?platform=macos&arch=arm64"], ["Mac · Intel", "?platform=macos&arch=x86_64"]];
     $("download").replaceChildren();
-    if (h.demo) { $("download").textContent="演示模式：此处不实际下载安装程序。"; $("local-link").removeAttribute("href"); $("local-link").textContent="演示模式不会打开真实电脑设置"; return; }
-    if (h.url) {
-      const a = make("a", "下载 Windows 助手 v" + h.version);
-      a.href = h.url;
-      $("download").append(a);
-      $("checksum").textContent = "SHA-256：" + h.sha256;
-    } else $("download").textContent = "新版安装包正在准备，暂未开放下载。";
+    for (const [label, query] of targets) {
+      const row = make("p", label + " · ");
+      $("download").append(row);
+      try {
+        const h = await api("/helper" + query);
+        if (h.demo) { $("download").textContent="演示模式：此处不实际下载安装程序。"; $("local-link").removeAttribute("href"); $("local-link").textContent="演示模式不会打开真实电脑设置"; return; }
+        if (h.url) {
+          const a = make("a", "下载助手 v" + h.version); a.href = h.url; row.append(a);
+          row.append(make("small", " SHA-256: " + h.sha256));
+        } else row.append(make("span", "新版安装包正在准备，暂未开放下载。"));
+      } catch { row.append(make("span", "暂时无法读取安装包信息，请稍后重试。")); }
+    }
     if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
       $("local-link").removeAttribute("href");
-      $("local-link").textContent = "请在 Windows 电脑上下载并完成设置。";
+      $("local-link").textContent = "请在 Windows 或 Mac 电脑上下载并完成设置。";
     }
     return;
   }
