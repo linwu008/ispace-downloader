@@ -1,5 +1,6 @@
 import { ensureStudySchema } from "./study_schema.js";
 // Personal metadata is independent of object storage and device lifetimes.
+import { macRelease } from "./helper_releases.js";
 export function createV07(h) {
   const {
     first,
@@ -146,7 +147,9 @@ export function createV07(h) {
     const p = url.pathname,
       m = request.method;
     if (!p.startsWith("/api/v07/")) return null;
-    if (p === "/api/v07/update" && m === "GET")
+    if (p === "/api/v07/update" && m === "GET") {
+      const release = macRelease(url, env, check);
+      if (release) return json(release);
       return json({
         version: env.HELPER_VERSION || "0.6.0",
         url: env.HELPER_DOWNLOAD_URL || null,
@@ -156,6 +159,7 @@ export function createV07(h) {
         reason: env.HELPER_UPDATE_REASON || "新增电脑功能与兼容性改进",
         site_version: "0.7.0",
       });
+    }
     await ensureStudySchema(env);
     if (p.startsWith("/api/v07/device/")) {
       const d = await deviceAuth(request, env),

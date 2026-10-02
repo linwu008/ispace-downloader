@@ -1,6 +1,7 @@
 import { storageBudget } from "./budgets.js";
 import { question } from "./knowledge.js";
 // Account recovery and archive APIs share the existing session/device boundary.
+import { macRelease } from "./helper_releases.js";
 export function createV05(h) {
   const {
     first,
@@ -132,6 +133,16 @@ export function createV05(h) {
     if (p === "/api/account" && env.MAIL_ENABLED === "0" && !archiveEnabled) {
       await session(request, env, false);
       return json({verified:false, quota:0, qa_enabled:false, mail_enabled:false, archive_enabled:false});
+    }
+    if (["/api/helper", "/api/helper/download"].includes(p) && m === "GET") {
+      const release = macRelease(url, env, check);
+      if (release) {
+        if (p.endsWith("/download")) {
+          check(release.available, "安装包尚未发布", 503);
+          return Response.redirect(release.url, 302);
+        }
+        return json(release);
+      }
     }
     if (p === "/api/helper/download" && env.DOWNLOAD_BUCKET)
       await storageBudget(env, "read", 2);
