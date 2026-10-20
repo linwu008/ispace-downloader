@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import time
+import threading
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -82,13 +83,19 @@ class Discovery:
 
 def browser_login(vault, username=None, password=None, manual=False):
     from playwright.sync_api import sync_playwright, TimeoutError as BrowserTimeout, Error as BrowserError
+    from . import desktop
+    desktop.prepare_browser()
     with sync_playwright() as engine:
         launch_options = {"headless": not manual}
-        if not Path(engine.chromium.executable_path).exists():
+        if desktop.is_macos():
+            launch_options["channel"] = "chromium"
+        if not desktop.is_macos() and not Path(engine.chromium.executable_path).exists():
             launch_options["channel"] = "msedge"
         try:
             browser = engine.chromium.launch(**launch_options)
         except BrowserError:
+            if desktop.is_macos():
+                raise ValueError("无法启动登录浏览器，请重新安装完整的 Mac 助手；源码运行请安装 Playwright Chromium") from None
             if launch_options.get("channel") == "msedge":
                 raise
             browser = engine.chromium.launch(**{**launch_options, "channel": "msedge"})
@@ -136,12 +143,20 @@ def browser_login(vault, username=None, password=None, manual=False):
 class Moodle:
     def __init__(self, state=None, base=BASE, transport=None):
         self.base = base.rstrip("/")
+        self._interrupted = threading.Event()
         cookies = httpx.Cookies()
         for cookie in (state or {}).get("cookies", []):
             cookies.set(cookie["name"], cookie["value"], domain=cookie.get("domain", ""), path=cookie.get("path", "/"))
         self.client = httpx.Client(cookies=cookies, transport=transport, trust_env=False, timeout=httpx.Timeout(60, connect=20), headers={"User-Agent": "iSpaceDownloader/0.2 (personal course backup)", "Accept-Encoding": "identity"})
 
     def interrupt(self):
+        self._interrupted.set()
+        self._shutdown_active_socket()
+        # Keep the descriptor alive until the reader observes shutdown. Closing
+        # it from another thread can leave macOS's timed socket read waiting on
+        # an invalid descriptor. The owning service closes the client in finally.
+
+    def _shutdown_active_socket(self):
         response = getattr(self, '_active_response', None)
         if response is not None:
             stream = response.extensions.get('network_stream')
@@ -152,7 +167,6 @@ class Moodle:
                     if connection: connection.shutdown(socket.SHUT_RDWR)
             except OSError:
                 pass
-        self.client.close()
 
     def close(self):
         self.client.close()
@@ -162,8 +176,10 @@ class Moodle:
         return target.scheme == base.scheme and target.netloc == base.netloc
 
     def request(self, method, url, **kwargs):
-        from .cancellation import check
+        from .cancellation import check, Cancelled
         check()
+        if self._interrupted.is_set():
+            raise Cancelled()
         url = urljoin(self.base + "/", url)
         for _ in range(8):
             if not self.allowed(url):
@@ -172,6 +188,12 @@ class Moodle:
                 raise LoginRequired("登录状态已过期，请重新登录")
             response = self.client.send(self.client.build_request(method, url, **kwargs), stream=True)
             self._active_response = response
+            # Cancellation can arrive while send() is still returning headers.
+            # A socket not yet registered by interrupt() must not start a read.
+            if self._interrupted.is_set():
+                self._shutdown_active_socket()
+                response.close()
+                raise Cancelled()
             check()
             if response.is_redirect:
                 location = response.headers.get("location")
@@ -392,6 +414,9 @@ class Moodle:
 
 
 def safe_error(exc):
+    from keyring.errors import KeyringError
+    if isinstance(exc, KeyringError):
+        return "无法访问系统凭据存储，请允许钥匙串或凭据访问后重新尝试登录"
     if isinstance(exc, (LoginRequired, ResourceError, ValueError)):
         return str(exc)
     if isinstance(exc, httpx.HTTPStatusError):

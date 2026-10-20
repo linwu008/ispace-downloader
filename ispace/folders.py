@@ -2,13 +2,14 @@
 import tempfile
 from pathlib import Path
 from .sync import digest, safe_name
+from . import desktop
 from .grouped_sync import atomic_copy
 
 def check_path(store, value):
     path = Path(value).expanduser()
     if not path.is_absolute(): raise ValueError('请输入完整的绝对路径')
     path = path.resolve()
-    for protected in (store.directory.resolve(), Path(__file__).resolve().parent.parent):
+    for protected in (store.directory.resolve(), desktop.application_root()):
         if path == protected or path in protected.parents or protected in path.parents:
             raise ValueError('不能选择程序或账号数据所在目录')
     if path == Path(path.anchor) or '.git' in path.parts: raise ValueError('请选择专门的资料文件夹')

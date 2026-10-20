@@ -17,6 +17,12 @@
 
 开发者仍可通过 `start-v04.cmd` 启动本地网站 http://127.0.0.1:8787 ，本地测试邀请码 `NEST-LOCAL-04` 仅用于本机。构建助手需 `requirements-build.lock` 中的依赖，运行 `scripts/build_assistant.ps1`，产物位于 `dist/`。
 
+## macOS 助手（新增支持）
+
+macOS 14+ 支持 Apple Silicon 和 Intel 两种独立应用包，内置 Python 和 Chromium。解压后将 `CourseNestHelper.app` 拖入 Applications 并打开；菜单栏可打开官网、电脑设置、启用登录启动或退出。配对和每日计划沿用官网流程。
+
+首版仅检查更新，下载后退出并替换应用；数据与钥匙串凭据保留。CI 构建未公证，正式发行需要维护者配置签名及发布元数据。构建、安装、权限和发行说明见 [macOS 助手说明](docs/MACOS-ASSISTANT.md)。
+
 ## 历史本地工作台说明（v0.3，供开发与回归参考）
 
 以下记录描述旧版完整本地工作台。当前日常使用官网，电脑页面仅保留登录、目录、配对和运行设置；每日计划在官网统一配置。当前使用流程以 [Windows 助手说明](docs/WINDOWS-ASSISTANT.md) 为准。

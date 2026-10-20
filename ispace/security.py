@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-import os
+from . import desktop
 from pathlib import Path
 
 from cryptography.fernet import Fernet, InvalidToken
@@ -15,16 +15,13 @@ class LoginRequired(Exception):
 
 
 class Vault:
-    """No plaintext fallback: credentials and the session encryption key live in Windows Vault."""
+    """No plaintext fallback: credentials and the session encryption key live in the OS credential store."""
 
     def __init__(self, directory: Path):
         self.path = directory / "session.enc"
 
     def backend(self):
-        if os.name != "nt":
-            raise RuntimeError("凭据保存仅支持 Windows；测试应注入模拟凭据存储")
-        from keyring.backends.Windows import WinVaultKeyring
-        return WinVaultKeyring()
+        return desktop.credential_backend()
 
     def credentials(self):
         raw = self.backend().get_password(SERVICE, "credentials")

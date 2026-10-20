@@ -108,6 +108,7 @@ def test_invalid_login_does_not_echo_password(tmp_path):
 
 def test_default_data_directory_survives_launch_environment_change(tmp_path, monkeypatch):
     from ispace.state import data_dir
+    monkeypatch.setattr('ispace.desktop.is_macos', lambda: False)
     monkeypatch.delenv("ISPACE_DATA_DIR", raising=False)
     marker = tmp_path / "runtime" / "data-dir.txt"
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "first-launch"))

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+from . import desktop
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -14,6 +15,10 @@ def now() -> str:
 def data_dir(marker: Path | None = None) -> Path:
     # Persist the resolved default: packaged-app and Explorer launches can resolve
     # LOCALAPPDATA differently on Windows. Explicit overrides remain independent.
+    if desktop.is_macos():
+        path = Path(os.environ.get("ISPACE_DATA_DIR") or desktop.default_data_dir()).expanduser()
+        path.mkdir(parents=True, exist_ok=True)
+        return path.resolve()
     marker = marker or Path(__file__).resolve().parent.parent / ".runtime" / "data-dir.txt"
     override = os.environ.get("ISPACE_DATA_DIR")
     if override:
@@ -104,9 +109,9 @@ class Store:
     def validate_folder(self, course_id, folder):
         path = Path(folder).expanduser()
         if not path.is_absolute():
-            raise ValueError("请选择绝对路径，例如 D:\\学习资料\\数学")
+            raise ValueError("请输入完整的绝对路径")
         path = path.resolve()
-        project = Path(__file__).resolve().parent.parent
+        project = desktop.application_root()
         for protected in (self.directory, project):
             if path == protected or path in protected.parents or protected in path.parents:
                 raise ValueError("课程目录不能包含程序、状态目录或位于这些目录内")
@@ -118,7 +123,7 @@ class Store:
                 if path == other or path in other.parents or other in path.parents:
                     raise ValueError("不同课程的目录不能相同或相互包含")
         if not path.is_dir():
-            raise ValueError("目录不存在，请先在资源管理器中创建")
+            raise ValueError("目录不存在，请先创建文件夹")
         return path
 
     def bind(self, course_id: int, folder: str, enabled: bool):

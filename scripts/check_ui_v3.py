@@ -121,10 +121,10 @@ with sync_playwright() as engine:
     assert page.locator('#task-location-dialog').evaluate('(d)=>d.scrollWidth<=d.clientWidth')
     page.screenshot(path=str(project/'.runtime/v03-history-location-mobile.png'))
     from unittest.mock import patch
-    with patch('ispace.web.subprocess.Popen') as explorer:
+    with patch('ispace.desktop.subprocess.Popen') as explorer:
         page.locator('#locate-task-file').click()
-        expect(page.locator('#location-note')).to_contain_text('已在资源管理器中定位')
-        assert explorer.call_count==1 and explorer.call_args.args[0][0]=='explorer.exe'
+        expect(page.locator('#location-note')).to_contain_text('已在文件管理器中定位')
+        assert explorer.call_count==1 and explorer.call_args.args[0][0]==('/usr/bin/open' if sys.platform=='darwin' else 'explorer.exe')
     page.keyboard.press('Escape')
     expect(page.locator('#task-location-dialog')).not_to_be_visible()
     page.set_viewport_size({'width':1440,'height':1000})

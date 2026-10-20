@@ -9,6 +9,7 @@ import sqlite3
 import threading
 import time
 from pathlib import Path
+from . import desktop
 from urllib.parse import urlsplit
 
 import httpx
@@ -134,7 +135,7 @@ class Companion:
                 row['status'] = 'missing'
             row['path'] = row['path'] or ''
         from . import __version__
-        return {'version': __version__, 'readiness': {**self.readiness, 'busy': self.service.busy()}, 'capabilities': ['archive-v1','setup-v1','cancel-v1','schedule-v1','confirm-v1','local-archive-v1','notes-v1','update-v1'], 'archive_status': self.store.setting('archive_status', {}), 'courses': [{'id': c['id'], 'name': c['name'], 'membership': c['membership'], 'sync_mode': c['sync_mode'], 'bound': bool(c['folder']), 'folder': c['folder'] or '', 'enabled': bool(c['enabled'])} for c in values],
+        return {'version': __version__, 'readiness': {**self.readiness, 'busy': self.service.busy()}, 'capabilities': ['archive-v1','setup-v1','cancel-v1','schedule-v1','confirm-v1','local-archive-v1','notes-v1', *(['update-check-v1'] if desktop.is_macos() else ['update-v1'])], 'archive_status': self.store.setting('archive_status', {}), 'courses': [{'id': c['id'], 'name': c['name'], 'membership': c['membership'], 'sync_mode': c['sync_mode'], 'bound': bool(c['folder']), 'folder': c['folder'] or '', 'enabled': bool(c['enabled'])} for c in values],
                 'groups': [{'id': g['id'], 'course_id': g['course_id'], 'title': g['title'], 'folder': g['folder'], 'position': g['position']} for g in catalog.groups(self.store)],
                 'materials': rows, 'auth': self.store.setting('auth_state', 'not_logged_in'), 'paused': config.get('paused', False), 'local_schedule': self.store.setting('schedule_enabled', False), 'plan_migration':self.store.setting('website_plan', {}), 'truncated': count > len(rows)}
 
@@ -314,7 +315,7 @@ def install_routes(app, store, service):
     @app.get('/api/updates')
     def updates():
         from . import __version__
-        return {**updater.state, 'current': __version__, 'automatic': store.setting('auto_update',False)}
+        return {**updater.state, 'current': __version__, 'mode': 'manual' if updater.manual else 'automatic', 'automatic': not updater.manual and store.setting('auto_update',False)}
 
     @app.post('/api/updates/check')
     def update_check():
@@ -322,6 +323,7 @@ def install_routes(app, store, service):
 
     @app.post('/api/updates/install')
     def update_install():
+        if updater.manual: raise ValueError('Mac 请下载新版，退出助手后替换应用')
         if service.busy(): raise ValueError('请等待当前任务结束后升级')
         if not updater.meta: raise ValueError('请先检查更新')
         def install():
@@ -332,6 +334,7 @@ def install_routes(app, store, service):
 
     @app.put('/api/updates/automatic')
     def auto_update(body: PreferenceBody):
+        if updater.manual: raise ValueError('Mac 首版仅支持手动更新')
         store.set('auto_update',body.enabled)
         return {'ok':True}
 

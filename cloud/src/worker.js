@@ -201,7 +201,7 @@ function sanitizeSnapshot(b) {
   return {
     version: text(b.version, 30),
     capabilities: Array.isArray(b.capabilities)
-      ? b.capabilities.filter((x) => ["archive-v1", "setup-v1", "cancel-v1", "schedule-v1", "confirm-v1", "local-archive-v1", "notes-v1", "update-v1"].includes(x))
+      ? b.capabilities.filter((x) => ["archive-v1", "setup-v1", "cancel-v1", "schedule-v1", "confirm-v1", "local-archive-v1", "notes-v1", "update-v1", "update-check-v1"].includes(x))
       : [],
     courses,
     groups,

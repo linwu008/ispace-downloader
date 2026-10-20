@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import secrets
-import subprocess
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -13,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from filelock import Timeout
 from pydantic import BaseModel, Field
 
+from . import desktop
 from . import __version__, catalog, organize, courses, previews, history
 from .scheduler import configure, next_run
 from .service import Service, BusyError
@@ -142,7 +142,7 @@ def create_app(store=None, service=None):
         if not busy and operation.get("status") == "running":
             operation = {**operation, "status": "interrupted", "message": "上次操作已中断，请重试"}
         return {
-            "version": __version__, "csrf": csrf, "busy": busy,
+            **desktop.identity(), "version": __version__, "csrf": csrf, "busy": busy,
             "auth": store.setting("auth_state", "not_logged_in"),
             "auth_checked_at": store.setting("auth_checked_at"),
             "courses": courses.summaries(store), "operation": operation,
@@ -218,16 +218,7 @@ def create_app(store=None, service=None):
 
     @app.post("/api/folder")
     def choose_folder():
-        if os.name != "nt":
-            raise ValueError("请选择并输入本地目录的绝对路径")
-        script = Path(__file__).resolve().parent / "static" / "choose-folder.ps1"
-        try:
-            result = subprocess.run(["powershell.exe", "-NoProfile", "-STA", "-ExecutionPolicy", "Bypass", "-File", str(script)], capture_output=True, timeout=180, creationflags=subprocess.CREATE_NO_WINDOW)
-        except subprocess.TimeoutExpired:
-            raise ValueError("文件夹选择已超时，请重试") from None
-        if result.returncode:
-            raise ValueError("无法打开目录选择器，请直接粘贴文件夹路径")
-        return {"folder": result.stdout.decode("utf-8-sig").strip()}
+        return {"folder": desktop.choose_folder()}
 
     @app.get("/api/groups")
     def group_list(course_id: int | None = None):
@@ -254,9 +245,7 @@ def create_app(store=None, service=None):
         path = Path(item["path"] or "")
         if not item["path"] or not path.is_file() or path.is_symlink() or not path.resolve().is_relative_to(root):
             raise ValueError("本地文件不存在或不在课程目录内，请重新检查")
-        if os.name != "nt":
-            raise ValueError("定位文件仅支持 Windows")
-        subprocess.Popen(["explorer.exe", "/select,", str(path.resolve())])
+        desktop.reveal(path.resolve())
         return {"ok": True}
 
     @app.post("/api/organization/preview")
@@ -332,9 +321,7 @@ def create_app(store=None, service=None):
             result = history.location(store, event_id)
             if not result['exists']:
                 raise ValueError(result['note'])
-            if os.name != 'nt':
-                raise ValueError('定位文件仅支持 Windows')
-            subprocess.Popen(['explorer.exe', '/select,', result['path']])
+            desktop.reveal(result['path'])
         return {'ok': True}
 
     from .companion import install_routes
