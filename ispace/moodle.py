@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import sys
 import time
 import threading
 from collections import deque
@@ -164,7 +165,11 @@ class Moodle:
                 import socket
                 if stream:
                     connection = stream.get_extra_info('socket')
-                    if connection: connection.shutdown(socket.SHUT_RDWR)
+                    if connection:
+                        connection.shutdown(socket.SHUT_RDWR)
+                        # Winsock does not wake a pending select()/recv() on
+                        # shutdown; only closing the socket aborts it there.
+                        if sys.platform == 'win32': connection.close()
             except OSError:
                 pass
 
