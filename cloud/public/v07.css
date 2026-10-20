@@ -1,163 +1,25 @@
-:root {
-  --ink: #183b47;
-  --muted: #627e88;
-  --green: #117f98;
-  --pale: #e7f5f8;
-  --line: #d5e7eb;
-  --paper: #f5fafb;
+@charset "UTF-8";
+/* Shared add-ons: dialogs, language switch, route loader (Nest 2). Used on the workspace and feature pages. */
+:root, :host {
+  --ink: #0f2d33; --muted: #6d8588; --teal: #0f6b7a; --teal-deep: #0a4a56;
+  --mint: #cfeee6; --paper: #f7f3ea; --surface: #fffdf8; --sand: #efe9da; --line: #e4dccb;
+  --serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", Georgia, serif;
 }
-.brand img {
-  width: 42px;
-  height: 42px;
-  object-fit: contain;
-  margin-right: 10px;
-}
-.welcome {
-  grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr);
-  align-items: start;
-}
-.welcome-copy {
-  grid-column: 1;
-}
-.auth-card {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  position: sticky;
-  top: 30px;
-}
-.home-explainer {
-  grid-column: 1;
-  padding: 24px 0;
-  max-width: 680px;
-}
-.home-explainer h2 {
-  font-size: 30px;
-  line-height: 1.35;
-  margin-top: 40px;
-}
-.home-steps {
-  display: grid;
-  gap: 12px;
-}
-.home-steps article,
-.v07-card {
-  background: white;
-  border: 1px solid var(--line, #d5e7eb);
-  border-radius: 16px;
-  padding: 24px;
-  margin: 16px 0;
-}
-.home-steps b {
-  color: #117f98;
-}
-.v07-card input,
-.v07-card select {
-  max-width: 100%;
-  padding: 10px;
-  border: 1px solid #aecdd5;
-  border-radius: 8px;
-  margin: 4px;
-}
-.v07-card button,
-.v07-dialog button {
-  padding: 10px 16px;
-  margin: 6px;
-  border: 1px solid #aacbd4;
-  border-radius: 8px;
-  background: #edf8fb;
-  color: #165c70;
-}
-.v07-dialog {
-  width: min(850px, 94vw);
-  max-height: 85vh;
-  overflow: auto;
-  padding: 28px;
-  border: 1px solid #b7d3db;
-  border-radius: 20px;
-  color: #183b47;
-  background: #f5fafb;
-}
-.v07-dialog::backdrop {
-  background: #123b4966;
-}
-.v07-dialog details {
-  border-top: 1px solid #d5e7eb;
-  padding: 16px 0;
-}
-.course-note,
-.v07-dialog pre {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font: inherit;
-}
-.v07-dialog small {
-  display: block;
-  color: #627e88;
-}
-#pending-button {
-  margin-left: 12px;
-}
-#language-switch {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 100;
-  padding: 8px 14px;
-  border-radius: 22px;
-  background: white;
-  border: 1px solid #afd0d8;
-  color: #15536a;
-}
-#route-loading {
-  position: fixed;
-  inset: 0;
-  background: #f5fafbf2;
-  z-index: 90;
-  display: grid;
-  place-content: center;
-  text-align: center;
-}
-#route-loading[hidden] {
-  display: none;
-}
-#route-loading img {
-  height: 70px;
-  margin: auto;
-}
-.session-loading {
-  visibility: hidden;
-}
-.session-loading.slow {
-  visibility: visible;
-}
-@media (max-width: 850px) {
-  .welcome {
-    display: flex;
-    flex-direction: column;
-    padding: 24px;
-    gap: 20px;
-  }
-  .auth-card {
-    position: static;
-    width: 100%;
-  }
-  .home-explainer {
-    order: 3;
-  }
-  .home-explainer h2 {
-    font-size: 24px;
-  }
-  .v07-dialog {
-    padding: 16px;
-  }
-}
-
-main {
-  padding-bottom: 80px;
-}
-
-.school-content-link {
-  display: block;
-  overflow-wrap: anywhere;
-  margin: 8px 0;
-}
+[hidden] { display: none !important; }
+.v07-card { margin: 16px 0; padding: 24px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); }
+.v07-card input, .v07-card select { margin: 4px; padding: 10px 12px; max-width: 100%; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.v07-card button, .v07-dialog button { margin: 6px; padding: 9px 18px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--teal-deep); font-weight: 600; }
+.v07-card button:hover, .v07-dialog button:hover { background: var(--sand); }
+.v07-dialog { width: min(860px, 94vw); max-height: 86vh; overflow: auto; padding: 30px; border: 0; border-radius: 26px; color: var(--ink); background: var(--surface); box-shadow: 0 60px 120px -30px #0a222999; }
+.v07-dialog::backdrop { background: #0a222980; -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
+.v07-dialog details { padding: 16px 0; border-top: 1px solid var(--line); }
+.v07-dialog small { display: block; color: var(--muted); }
+.course-note, .v07-dialog pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+.school-content-link { display: block; margin: 8px 0; overflow-wrap: anywhere; }
+#pending-button { margin-left: 12px; }
+#language-switch { position: fixed; right: 16px; bottom: 16px; z-index: 100; padding: 8px 16px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--teal-deep); font-size: 12px; box-shadow: 0 10px 24px -14px #0f2d3366; }
+.footer-line #language-switch, .auth-bottom #language-switch { position: static; box-shadow: none; background: transparent; color: inherit; border-color: currentColor; }
+#route-loading { position: fixed; inset: 0; z-index: 90; display: grid; place-content: center; text-align: center; background: #f7f3eaf2; }
+#route-loading[hidden] { display: none; }
+#route-loading img { height: 70px; margin: auto; }
+@media (max-width: 850px) { .v07-dialog { padding: 18px; } }
